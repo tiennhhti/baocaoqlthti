@@ -1,0 +1,2211 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hệ Thống Điều Hành Chỉ Tiêu BHXH - BHYT & Thu Tái Tục</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SheetJS CDN cho File Excel .XLSX -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .tab-active { border-bottom: 3px solid #1d4ed8; color: #1d4ed8; font-weight: 800; background-color: #eff6ff; }
+    .moc-btn-active { background-color: #1e3a8a; color: #ffffff; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+
+    table.data-table {
+      border-collapse: collapse !important;
+      border: 2px solid #334155 !important;
+    }
+    table.data-table th, table.data-table td {
+      border: 1px solid #94a3b8 !important;
+    }
+    table.data-table thead th {
+      border-bottom: 2px solid #1e293b !important;
+    }
+    .total-row {
+      background-color: #cbd5e1 !important;
+      font-weight: 800 !important;
+      border-top: 2.5px solid #0f172a !important;
+      border-bottom: 2.5px solid #0f172a !important;
+    }
+
+    .val-good { color: #047857 !important; font-weight: 700; }
+    .val-warning { color: #b45309 !important; font-weight: 700; }
+    .val-danger { color: #b91c1c !important; font-weight: 700; }
+
+    #selectDate option, #selectMonthViet option, #selectYearViet option {
+      color: #0f172a !important;
+      background-color: #ffffff !important;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased">
+
+  <!-- TOP HEADER -->
+  <header class="bg-gradient-to-r from-blue-950 via-indigo-900 to-slate-900 text-white shadow-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="p-2.5 bg-blue-600/60 rounded-xl border border-blue-400/30 text-white text-xl shadow-inner">
+          <i class="fa-solid fa-table-cells"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-black uppercase tracking-tight">HỆ THỐNG ĐIỀU HÀNH CHỈ TIÊU BHXH - BHYT & THU TÁI TỤC</h1>
+          <p class="text-xs text-blue-200">Quản lý số liệu gốc & So sánh tiến độ ngày/tuần | 9 đơn vị (VP tỉnh & 8 đơn vị cơ sở)</p>
+        </div>
+      </div>
+
+      <div class="flex items-center flex-wrap gap-2 text-xs">
+        <div class="flex items-center bg-slate-800/90 border border-slate-600 rounded-lg px-2.5 py-1.5 text-blue-100">
+          <i class="fa-regular fa-calendar mr-1.5 text-blue-400"></i>
+          <span class="mr-1 text-slate-300">Ngày:</span>
+          <select id="selectDate" onchange="onDateChanged()" class="bg-transparent text-white font-bold outline-none cursor-pointer">
+          </select>
+        </div>
+
+        <div class="flex items-center bg-slate-800/90 border border-slate-600 rounded-lg px-2.5 py-1.5 text-blue-100 gap-1">
+          <i class="fa-regular fa-calendar-days text-amber-400"></i>
+          <span class="text-slate-300">Kỳ:</span>
+          <select id="selectMonthViet" onchange="onMonthYearVietChanged()" class="bg-transparent text-white font-bold outline-none cursor-pointer">
+            <option value="1">Tháng 1</option><option value="2">Tháng 2</option><option value="3">Tháng 3</option>
+            <option value="4">Tháng 4</option><option value="5">Tháng 5</option><option value="6">Tháng 6</option>
+            <option value="7">Tháng 7</option><option value="8">Tháng 8</option><option value="9" selected>Tháng 9</option>
+            <option value="10">Tháng 10</option><option value="11">Tháng 11</option><option value="12">Tháng 12</option>
+          </select>
+          <select id="selectYearViet" onchange="onMonthYearVietChanged()" class="bg-transparent text-white font-bold outline-none cursor-pointer">
+            <option value="2026" selected>2026</option>
+            <option value="2027">2027</option>
+          </select>
+        </div>
+
+        <button onclick="openMonthlySummaryModal()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg font-bold shadow flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-chart-pie"></i> Tổng hợp Tháng/Năm
+        </button>
+
+        <div class="inline-flex bg-slate-800 p-1 rounded-lg border border-slate-700">
+          <button id="btn-moc1" onclick="setMoc('m1')" class="px-3 py-1 rounded-md text-xs transition moc-btn-active">Mức 1 (Tối thiểu)</button>
+          <button id="btn-moc2" onclick="setMoc('m2')" class="px-3 py-1 rounded-md text-xs transition text-slate-300 hover:text-white">Mức 2 (CV 266)</button>
+        </div>
+
+        <button onclick="exportCurrentTableToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg font-bold shadow flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-file-excel"></i> Xuất File .xlsx
+        </button>
+      </div>
+    </div>
+
+    <!-- TABS CHUYÊN MÔN -->
+    <div class="bg-white text-slate-600 border-b border-slate-200 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 flex space-x-1 text-xs sm:text-sm overflow-x-auto">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="py-3 px-4 tab-active flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-table-cells-large text-blue-600"></i> Tổng hợp 3 chỉ tiêu</button>
+        <button onclick="switchTab('bhxh_bb')" id="tab-bhxh_bb" class="py-3 px-4 hover:text-blue-700 flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-building-shield text-blue-600"></i> BHXH bắt buộc</button>
+        <button onclick="switchTab('bhxh_tn')" id="tab-bhxh_tn" class="py-3 px-4 hover:text-emerald-700 flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-user-shield text-emerald-600"></i> BHXH tự nguyện</button>
+        <button onclick="switchTab('bhyt')" id="tab-bhyt" class="py-3 px-4 hover:text-indigo-700 flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-heart-pulse text-indigo-600"></i> Bảo hiểm y tế</button>
+        <button onclick="switchTab('hssv')" id="tab-hssv" class="py-3 px-4 hover:text-cyan-700 flex items-center gap-2 whitespace-nowrap font-bold"><i class="fa-solid fa-graduation-cap text-cyan-600"></i> BHYT HSSV</button>
+        <button onclick="switchTab('sothu')" id="tab-sothu" class="py-3 px-4 hover:text-emerald-700 flex items-center gap-2 whitespace-nowrap font-bold"><i class="fa-solid fa-sack-dollar text-emerald-600"></i> Số Thu (Cập nhật ngày)</button>
+        <button onclick="switchTab('giamno')" id="tab-giamno" class="py-3 px-4 hover:text-amber-700 flex items-center gap-2 whitespace-nowrap font-bold"><i class="fa-solid fa-scale-balanced text-amber-600"></i> Giảm Nợ Quý 3 (Cập nhật ngày)</button>
+        <button onclick="switchTab('tai_tuc')" id="tab-tai_tuc" class="py-3 px-4 hover:text-rose-700 flex items-center gap-2 whitespace-nowrap font-bold"><i class="fa-solid fa-arrows-spin text-rose-600"></i> Tái tục TN & BHYT (Theo tuần)</button>
+        <button onclick="switchProtectedTab('import_daily')" id="tab-import_daily" class="py-3 px-4 hover:text-amber-700 flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-lock text-amber-500"></i> Cập nhật gốc ngày (.xlsx)</button>
+        <button onclick="switchProtectedTab('config_month')" id="tab-config_month" class="py-3 px-4 hover:text-purple-700 flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-lock text-purple-500"></i> Mốc tháng trước</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN VIEW -->
+  <main class="max-w-7xl mx-auto px-4 py-5 sm:px-6 flex-1 w-full space-y-5">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden">
+      <span id="table-title" class="hidden"></span>
+
+      <!-- TAB 1: BẢNG TỔNG HỢP 3 CHỈ TIÊU -->
+      <div id="view-dashboard" class="overflow-x-auto p-4">
+        <table class="w-full text-xs text-left text-slate-800 data-table">
+          <thead class="text-[11px] bg-slate-200 uppercase font-bold text-slate-900">
+            <tr>
+              <th rowspan="2" class="p-2 text-center w-10">STT</th>
+              <th rowspan="2" class="p-2 min-w-[130px]">Đơn vị</th>
+              <th colspan="5" class="p-2 text-center bg-blue-100 text-blue-950 font-black" id="header-col-bb">BHXH Bắt Buộc (Mức 1)</th>
+              <th colspan="5" class="p-2 text-center bg-emerald-100 text-emerald-950 font-black" id="header-col-tn">BHXH Tự Nguyện (Mức 1)</th>
+              <th colspan="5" class="p-2 text-center bg-indigo-100 text-indigo-950 font-black" id="header-col-bhyt">Bảo Hiểm Y Tế (Mức 1)</th>
+              <th colspan="2" class="p-2 text-center bg-amber-100 text-amber-950 font-black">So Sánh Tiến Độ</th>
+            </tr>
+            <tr class="text-[10px]">
+              <th class="p-2 text-right bg-blue-50/80">Chỉ tiêu Q3</th>
+              <th class="p-2 text-right bg-blue-50/80">Thực hiện</th>
+              <th class="p-2 text-right bg-blue-50/80">% Đạt Q3</th>
+              <th class="p-2 text-right bg-blue-50/80">% Đạt Năm</th>
+              <th class="p-2 text-right bg-blue-50/80">Còn Q3</th>
+              <th class="p-2 text-right bg-emerald-50/80">Chỉ tiêu Q3</th>
+              <th class="p-2 text-right bg-emerald-50/80">Thực hiện</th>
+              <th class="p-2 text-right bg-emerald-50/80">% Đạt Q3</th>
+              <th class="p-2 text-right bg-emerald-50/80">% Đạt Năm</th>
+              <th class="p-2 text-right bg-emerald-50/80">Còn Q3</th>
+              <th class="p-2 text-right bg-indigo-50/80">Chỉ tiêu Q3</th>
+              <th class="p-2 text-right bg-indigo-50/80">Thực hiện</th>
+              <th class="p-2 text-right bg-indigo-50/80">% Đạt Q3</th>
+              <th class="p-2 text-right bg-indigo-50/80">% Đạt Năm</th>
+              <th class="p-2 text-right bg-indigo-50/80">Còn Q3</th>
+              <th class="p-2 text-right bg-amber-50/80">So ngày qua</th>
+              <th class="p-2 text-right bg-amber-50/80">So tháng trước</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-main" class="font-medium"></tbody>
+          <tfoot id="tfoot-main"></tfoot>
+        </table>
+      </div>
+
+      <!-- TAB 2: BHXH BẮT BUỘC -->
+      <div id="view-bhxh_bb" class="overflow-x-auto p-4 hidden">
+        <table class="w-full text-xs text-left text-slate-800 data-table">
+          <thead class="text-[11px] bg-slate-200 uppercase font-bold text-slate-900">
+            <tr>
+              <th class="p-2 text-center w-10">STT</th>
+              <th class="p-2 min-w-[130px]">Đơn vị</th>
+              <th class="p-2 text-right bg-blue-100 text-blue-950 font-black">Số thực hiện</th>
+              <th class="p-2 text-right bg-amber-100 text-amber-950 font-black">Tăng/Giảm ngày</th>
+              <th class="p-2 text-right">Chỉ tiêu năm</th>
+              <th class="p-2 text-right">Chỉ tiêu quý 3</th>
+              <th class="p-2 text-right bg-blue-50 text-blue-900 font-bold">% Đạt Q3</th>
+              <th class="p-2 text-right">% Đạt Năm</th>
+              <th class="p-2 text-right">Còn Q3</th>
+              <th class="p-2 text-right">Còn Năm</th>
+              <th class="p-2 text-right">So tháng trước</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-bhxh_bb" class="font-medium"></tbody>
+          <tfoot id="tfoot-bhxh_bb"></tfoot>
+        </table>
+      </div>
+
+      <!-- TAB 3: BHXH TỰ NGUYỆN -->
+      <div id="view-bhxh_tn" class="overflow-x-auto p-4 hidden">
+        <table class="w-full text-xs text-left text-slate-800 data-table">
+          <thead class="text-[11px] bg-slate-200 uppercase font-bold text-slate-900">
+            <tr>
+              <th class="p-2 text-center w-10">STT</th>
+              <th class="p-2 min-w-[130px]">Đơn vị</th>
+              <th class="p-2 text-right bg-emerald-100 text-emerald-950 font-black">Số thực hiện</th>
+              <th class="p-2 text-right bg-amber-100 text-amber-950 font-black">Tăng/Giảm ngày</th>
+              <th class="p-2 text-right">Chỉ tiêu năm</th>
+              <th class="p-2 text-right">Chỉ tiêu quý 3</th>
+              <th class="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">% Đạt Q3</th>
+              <th class="p-2 text-right">% Đạt Năm</th>
+              <th class="p-2 text-right">Còn Q3</th>
+              <th class="p-2 text-right">Còn Năm</th>
+              <th class="p-2 text-right">So tháng trước</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-bhxh_tn" class="font-medium"></tbody>
+          <tfoot id="tfoot-bhxh_tn"></tfoot>
+        </table>
+      </div>
+
+      <!-- TAB 4: BHYT -->
+      <div id="view-bhyt" class="overflow-x-auto p-4 hidden">
+        <table class="w-full text-xs text-left text-slate-800 data-table">
+          <thead class="text-[11px] bg-slate-200 uppercase font-bold text-slate-900">
+            <tr>
+              <th class="p-2 text-center w-10">STT</th>
+              <th class="p-2 min-w-[130px]">Đơn vị</th>
+              <th class="p-2 text-right bg-indigo-100 text-indigo-950 font-black">Số thực hiện</th>
+              <th class="p-2 text-right bg-amber-100 text-amber-950 font-black">Tăng/Giảm ngày</th>
+              <th class="p-2 text-right">Chỉ tiêu năm</th>
+              <th class="p-2 text-right">Chỉ tiêu quý 3</th>
+              <th class="p-2 text-right bg-indigo-50 text-indigo-900 font-bold">% Đạt Q3</th>
+              <th class="p-2 text-right">% Đạt Năm</th>
+              <th class="p-2 text-right">Còn Q3</th>
+              <th class="p-2 text-right">Còn Năm</th>
+              <th class="p-2 text-right">So tháng trước</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-bhyt" class="font-medium"></tbody>
+          <tfoot id="tfoot-bhyt"></tfoot>
+        </table>
+      </div>
+
+      <!-- TAB HSSV -->
+      <div id="view-hssv" class="p-4 hidden space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-300">
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm uppercase"><i class="fa-solid fa-graduation-cap text-cyan-600 mr-1.5"></i>BÁO CÁO BHYT HỌC SINH, SINH VIÊN NĂM HỌC 2026-2027</h4>
+            <p class="text-xs text-slate-500">Quản lý số trường, số học sinh, thẻ khác, số cần vận động và tỷ lệ tham gia BHYT các đơn vị</p>
+          </div>
+          <div class="flex items-center flex-wrap gap-2">
+            <div class="flex items-center bg-slate-200 px-2.5 py-1 rounded-lg border border-slate-300 text-xs font-bold gap-1.5">
+              <span class="text-slate-700"><i class="fa-solid fa-filter text-blue-600"></i> Đợt:</span>
+              <select id="selectHssvDot" onchange="onHssvDotChanged()" class="bg-white text-blue-900 font-bold rounded px-2 py-1 outline-none cursor-pointer border border-slate-300">
+                <option value="dot1" selected>Đợt 1</option>
+                <option value="dot2">Đợt 2</option>
+              </select>
+            </div>
+
+            <button onclick="downloadHssvExcelTemplate()" class="bg-blue-700 hover:bg-blue-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-download"></i> Tải file mẫu .xlsx
+            </button>
+            <label class="bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition cursor-pointer">
+              <i class="fa-solid fa-file-excel"></i> Cập nhật từ File Excel
+              <input type="file" accept=".xlsx, .xls, .csv" onchange="handleHssvFileUpload(event)" class="hidden">
+            </label>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left text-slate-800 data-table">
+            <thead class="text-[11px] bg-slate-200 uppercase font-bold text-slate-900">
+              <tr>
+                <th class="p-2 text-center w-10">STT</th>
+                <th class="p-2 min-w-[140px]">Đơn vị</th>
+                <th class="p-2 text-right bg-cyan-100 text-cyan-950 font-black">Số trường học</th>
+                <th class="p-2 text-right bg-blue-50">Số học sinh</th>
+                <th class="p-2 text-right bg-indigo-50">Số có thẻ khác</th>
+                <th class="p-2 text-right bg-purple-100 text-purple-950 font-black">Số cần vận động</th>
+                <th class="p-2 text-right bg-emerald-100 text-emerald-950 font-black">Số đã tham gia</th>
+                <th class="p-2 text-right bg-amber-100 text-amber-950 font-black">Tỷ lệ hoàn thành</th>
+                <th class="p-2 text-right bg-rose-100 text-rose-950 font-black">Số chưa tham gia</th>
+                <th class="p-2 text-center bg-slate-300 font-black w-24">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-hssv" class="font-medium"></tbody>
+            <tfoot id="tfoot-hssv"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB SỐ THU -->
+      <div id="view-sothu" class="p-4 hidden space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-300">
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm uppercase"><i class="fa-solid fa-sack-dollar text-emerald-600 mr-1.5"></i>SỐ THU BHXH, BHYT, BHTN, BHTNLĐ-BNN (ĐVT: Triệu đồng)</h4>
+            <p class="text-xs text-slate-500">Cập nhật theo ngày và quản lý số thu</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="downloadSoThuExcelTemplate()" class="bg-blue-700 hover:bg-blue-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-download"></i> Tải file mẫu .xlsx
+            </button>
+            <label class="bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition cursor-pointer">
+              <i class="fa-solid fa-file-excel"></i> Cập nhật từ File Excel
+              <input type="file" accept=".xlsx, .xls, .csv" onchange="handleSoThuFileUpload(event)" class="hidden">
+            </label>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left text-slate-800 data-table">
+            <thead class="text-[11px] bg-slate-200 uppercase font-bold text-slate-900">
+              <tr>
+                <th class="p-2 text-center w-10">STT</th>
+                <th class="p-2 min-w-[140px]">Đơn vị</th>
+                <th class="p-2 text-right bg-blue-50">Số giao kế hoạch năm</th>
+                <th class="p-2 text-right bg-emerald-100 text-emerald-950 font-black" id="th-sothu-date-header">Số thực hiện đến ngày</th>
+                <th class="p-2 text-right bg-indigo-100 text-indigo-950 font-black">Tỷ lệ hoàn thành</th>
+                <th class="p-2 text-right bg-slate-100 font-bold">Số còn phải thực hiện năm</th>
+                <th class="p-2 text-center bg-slate-300 font-black w-24">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-sothu" class="font-medium"></tbody>
+            <tfoot id="tfoot-sothu"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB GIẢM NỢ QUÝ 3 -->
+      <div id="view-giamno" class="p-4 hidden space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-300">
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm uppercase"><i class="fa-solid fa-scale-balanced text-amber-600 mr-1.5"></i>TỔNG NỢ BHXH, BHYT, BHTN PHÁT SINH TÍNH LÃI (ĐVT: Triệu đồng)</h4>
+            <p class="text-xs text-slate-500">Cập nhật số liệu giảm nợ, tỷ lệ dư nợ theo ngày</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="downloadGiamNoExcelTemplate()" class="bg-blue-700 hover:bg-blue-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-download"></i> Tải file mẫu .xlsx
+            </button>
+            <label class="bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition cursor-pointer">
+              <i class="fa-solid fa-file-excel"></i> Cập nhật từ File Excel
+              <input type="file" accept=".xlsx, .xls, .csv" onchange="handleGiamNoFileUpload(event)" class="hidden">
+            </label>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left text-slate-800 data-table">
+            <thead class="text-[11px] bg-slate-200 uppercase font-bold text-slate-900">
+              <tr>
+                <th rowspan="2" class="p-2 text-center w-10">TT</th>
+                <th rowspan="2" class="p-2 min-w-[140px]">Đơn vị</th>
+                <th colspan="2" class="p-2 text-center bg-blue-100 text-blue-950 font-black">Số giao giảm nợ quý 3</th>
+                <th colspan="2" class="p-2 text-center bg-emerald-100 text-emerald-950 font-black">Số giảm nợ thực hiện</th>
+                <th colspan="2" class="p-2 text-center bg-amber-100 text-amber-950 font-black w-[220px]">Số còn phải thực hiện</th>
+                <th rowspan="2" class="p-2 text-center bg-slate-300 font-black w-24">Thao tác</th>
+              </tr>
+              <tr class="text-[10px]">
+                <th class="p-1 text-right bg-blue-50">Số tiền</th>
+                <th class="p-1 text-right bg-blue-50">Tỷ lệ</th>
+                <th class="p-1 text-right bg-emerald-50">Số tiền</th>
+                <th class="p-1 text-right bg-emerald-50">Tỷ lệ</th>
+                <th class="p-1 text-right bg-amber-50">Số tiền</th>
+                <th class="p-1 text-right bg-amber-50 w-[90px]">Tỷ lệ (%)</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-giamno" class="font-medium"></tbody>
+            <tfoot id="tfoot-giamno"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB THU TÁI TỤC (THEO TUẦN) -->
+      <div id="view-tai_tuc" class="p-4 hidden space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-300">
+          <div class="inline-flex bg-slate-200 p-1 rounded-lg border border-slate-300 text-xs">
+            <button id="btn-sub-tt-tn" onclick="switchTaiTucSub('tn')" class="px-3.5 py-1.5 rounded-md font-bold transition bg-emerald-700 text-white shadow"><i class="fa-solid fa-user-shield mr-1"></i>1. BHXH Tự Nguyện (Theo tuần)</button>
+            <button id="btn-sub-tt-bhyt" onclick="switchTaiTucSub('bhyt')" class="px-3.5 py-1.5 rounded-md font-bold transition text-slate-700 hover:text-slate-900"><i class="fa-solid fa-heart-pulse mr-1"></i>2. Bảo Hiểm Y Tế (Theo tuần)</button>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="downloadTaiTucExcelTemplate()" class="bg-blue-700 hover:bg-blue-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-download"></i> Tải file mẫu Tái tục .xlsx
+            </button>
+            <label class="bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition cursor-pointer">
+              <i class="fa-solid fa-file-excel"></i> Cập nhật từ File Excel
+              <input type="file" accept=".xlsx, .xls, .csv" onchange="handleTaiTucFileUpload(event)" class="hidden">
+            </label>
+            <button onclick="openTaiTucInputModal()" class="bg-rose-700 hover:bg-rose-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition"><i class="fa-solid fa-pen-to-square"></i> Cập nhật thủ công</button>
+          </div>
+        </div>
+
+        <div id="sub-view-tt-tn" class="overflow-x-auto">
+          <table class="w-full text-xs text-left text-slate-800 data-table">
+            <thead class="text-[11px] bg-slate-200 uppercase font-bold text-slate-900">
+              <tr>
+                <th rowspan="3" class="p-2 text-center w-10">TT</th>
+                <th rowspan="3" class="p-2 min-w-[120px]">Đơn vị</th>
+                <th colspan="2" class="p-2 text-center bg-emerald-100 text-emerald-950 font-black">Số cần vận động tái tục</th>
+                <th colspan="12" class="p-2 text-center bg-blue-100 text-blue-950 font-black">Kết quả vận động so sánh theo tuần (Người)</th>
+                <th colspan="2" class="p-2 text-center bg-amber-100 text-amber-950 font-black">BHXH TN còn lại</th>
+                <th rowspan="3" class="p-2 text-center bg-slate-300 font-black w-20">Thao tác</th>
+              </tr>
+              <tr class="text-[10px]">
+                <th rowspan="2" class="p-1.5 text-right bg-emerald-50">Đến hạn</th>
+                <th rowspan="2" class="p-1.5 text-right bg-emerald-50">Quá hạn</th>
+                <th colspan="2" class="p-1.5 text-center bg-blue-50">Tuần 1</th>
+                <th colspan="2" class="p-1.5 text-center bg-blue-50">Tuần 2</th>
+                <th colspan="2" class="p-1.5 text-center bg-blue-50">Tuần 3</th>
+                <th colspan="2" class="p-1.5 text-center bg-blue-50">Tuần 4</th>
+                <th colspan="4" class="p-1.5 text-center bg-emerald-100 text-emerald-950 font-black">Tổng cộng kết quả</th>
+                <th rowspan="2" class="p-1.5 text-right bg-amber-50">Đến hạn</th>
+                <th rowspan="2" class="p-1.5 text-right bg-amber-50">Quá hạn</th>
+              </tr>
+              <tr class="text-[10px]">
+                <th class="p-1 text-right">Đến hạn</th><th class="p-1 text-right">Quá hạn</th>
+                <th class="p-1 text-right">Đến hạn</th><th class="p-1 text-right">Quá hạn</th>
+                <th class="p-1 text-right">Đến hạn</th><th class="p-1 text-right">Quá hạn</th>
+                <th class="p-1 text-right">Đến hạn</th><th class="p-1 text-right">Quá hạn</th>
+                <th class="p-1 text-right bg-emerald-50 font-bold">Đến hạn</th><th class="p-1 text-right bg-emerald-50 font-bold">Tỷ lệ %</th>
+                <th class="p-1 text-right bg-rose-50 font-bold">Quá hạn</th><th class="p-1 text-right bg-rose-50 font-bold">Tỷ lệ %</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-tai_tuc-tn" class="font-medium"></tbody>
+            <tfoot id="tfoot-tai_tuc-tn"></tfoot>
+          </table>
+        </div>
+
+        <div id="sub-view-tt-bhyt" class="overflow-x-auto hidden">
+          <table class="w-full text-xs text-left text-slate-800 data-table">
+            <thead class="text-[11px] bg-slate-200 uppercase font-bold text-slate-900">
+              <tr>
+                <th rowspan="3" class="p-2 text-center w-10">TT</th>
+                <th rowspan="3" class="p-2 min-w-[120px]">Đơn vị</th>
+                <th colspan="2" class="p-2 text-center bg-indigo-100 text-indigo-950 font-black">Số cần vận động tái tục</th>
+                <th colspan="12" class="p-2 text-center bg-blue-100 text-blue-950 font-black">Kết quả vận động so sánh theo tuần (Người)</th>
+                <th colspan="2" class="p-2 text-center bg-amber-100 text-amber-950 font-black">BHYT còn lại</th>
+                <th rowspan="3" class="p-2 text-center bg-slate-300 font-black w-20">Thao tác</th>
+              </tr>
+              <tr class="text-[10px]">
+                <th rowspan="2" class="p-1.5 text-right bg-indigo-50">Đến hạn</th>
+                <th rowspan="2" class="p-1.5 text-right bg-indigo-50">Quá hạn</th>
+                <th colspan="2" class="p-1.5 text-center bg-blue-50">Tuần 1</th>
+                <th colspan="2" class="p-1.5 text-center bg-blue-50">Tuần 2</th>
+                <th colspan="2" class="p-1.5 text-center bg-blue-50">Tuần 3</th>
+                <th colspan="2" class="p-1.5 text-center bg-blue-50">Tuần 4</th>
+                <th colspan="4" class="p-1.5 text-center bg-indigo-100 text-indigo-950 font-black">Tổng cộng kết quả</th>
+                <th rowspan="2" class="p-1.5 text-right bg-amber-50">Đến hạn</th>
+                <th rowspan="2" class="p-1.5 text-right bg-amber-50">Quá hạn</th>
+              </tr>
+              <tr class="text-[10px]">
+                <th class="p-1 text-right">Đến hạn</th><th class="p-1 text-right">Quá hạn</th>
+                <th class="p-1 text-right">Đến hạn</th><th class="p-1 text-right">Quá hạn</th>
+                <th class="p-1 text-right">Đến hạn</th><th class="p-1 text-right">Quá hạn</th>
+                <th class="p-1 text-right">Đến hạn</th><th class="p-1 text-right">Quá hạn</th>
+                <th class="p-1 text-right bg-indigo-50 font-bold">Đến hạn</th><th class="p-1 text-right bg-indigo-50 font-bold">Tỷ lệ %</th>
+                <th class="p-1 text-right bg-rose-50 font-bold">Quá hạn</th><th class="p-1 text-right bg-rose-50 font-bold">Tỷ lệ %</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-tai_tuc-bhyt" class="font-medium"></tbody>
+            <tfoot id="tfoot-tai_tuc-bhyt"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB CẬP NHẬT NGÀY -->
+      <div id="view-import_daily" class="p-6 hidden max-w-3xl mx-auto space-y-4">
+        <div class="border-b border-slate-200 pb-3 flex justify-between items-center">
+          <div>
+            <h4 class="font-bold text-slate-800 text-base"><i class="fa-solid fa-lock text-amber-600 mr-1.5"></i>CẬP NHẬT SỐ LIỆU GỐC & TIẾN ĐỘ THEO NGÀY (.XLSX)</h4>
+            <p class="text-xs text-slate-500">Cập nhật tự động số liệu gốc phát triển đối tượng, số thu và giảm nợ theo ngày bằng file Excel.</p>
+          </div>
+          <button onclick="lockCurrentSession()" class="text-xs text-rose-600 hover:underline font-bold"><i class="fa-solid fa-arrow-right-from-bracket"></i> Khóa tab</button>
+        </div>
+        <div class="space-y-4 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Ngày chốt số liệu mới:</label>
+              <input type="date" id="newDailyDate" value="2026-09-21" class="w-full border border-slate-400 rounded-lg p-2 font-medium outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Chọn file Excel (.xlsx):</label>
+              <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" onchange="handleExcelFileUpload(event)" class="w-full border border-slate-400 rounded-lg p-1.5 font-medium outline-none bg-white cursor-pointer">
+            </div>
+          </div>
+          <div class="flex justify-between items-center pt-2">
+            <button onclick="downloadExcelTemplate()" class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg font-bold shadow flex items-center gap-1.5 transition text-xs">
+              <i class="fa-solid fa-download"></i> Tải file Excel mẫu tiến độ ngày (.xlsx)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB CẤU HÌNH THÁNG & CHỈ TIÊU DƯ NỢ -->
+      <div id="view-config_month" class="p-6 hidden max-w-4xl mx-auto space-y-6">
+        <div class="border-b border-slate-200 pb-3 flex justify-between items-center">
+          <div>
+            <h4 class="font-bold text-slate-800 text-base"><i class="fa-solid fa-lock text-purple-600 mr-1.5"></i>CẤU HÌNH MỐC THÁNG TRƯỚC & CHỈ TIÊU DƯ NỢ</h4>
+            <p class="text-xs text-slate-500">Khu vực bảo mật | Chỉnh sửa mốc tháng trước và cấu hình giao chỉ tiêu giảm nợ.</p>
+          </div>
+          <button onclick="lockCurrentSession()" class="text-xs text-rose-600 hover:underline font-bold"><i class="fa-solid fa-arrow-right-from-bracket"></i> Khóa tab</button>
+        </div>
+
+        <div class="space-y-2">
+          <h5 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-calendar-days text-purple-600 mr-1"></i> 1. Cấu hình mốc tháng trước (9 đơn vị)</h5>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left text-slate-800 data-table">
+              <thead class="text-[11px] bg-slate-200 uppercase font-bold text-slate-900">
+                <tr>
+                  <th class="p-2 text-center w-10">STT</th>
+                  <th class="p-2 min-w-[130px]">Đơn vị</th>
+                  <th class="p-2 text-right">BHXH Bắt buộc tháng trước</th>
+                  <th class="p-2 text-right">BHXH Tự nguyện tháng trước</th>
+                  <th class="p-2 text-right">BHYT tháng trước</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-config-month"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="space-y-2 pt-2">
+          <h5 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-scale-balanced text-amber-600 mr-1"></i> 2. Cấu hình chỉ tiêu Giao Giảm Nợ Quý 3 (Triệu đồng & Tỷ lệ %)</h5>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left text-slate-800 data-table">
+              <thead class="text-[11px] bg-slate-200 uppercase font-bold text-slate-900">
+                <tr>
+                  <th class="p-2 text-center w-10">STT</th>
+                  <th class="p-2 min-w-[130px]">Đơn vị</th>
+                  <th class="p-2 text-right">Số giao giảm nợ (Triệu đồng)</th>
+                  <th class="p-2 text-right">Tỷ lệ giao (%)</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-config-giamno"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="flex justify-end pt-2">
+          <button onclick="saveMonthAndGiamNoBenchmark()" class="px-5 py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-lg shadow flex items-center gap-1.5 text-xs"><i class="fa-solid fa-floppy-disk"></i> Lưu Tất Cả Cấu Hình</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL: TÁI TỤC THỦ CÔNG -->
+  <div id="modal-taituc" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-300">
+      <div class="px-6 py-4 bg-gradient-to-r from-rose-900 to-indigo-900 text-white flex justify-between items-center">
+        <div>
+          <h3 class="font-bold text-base">CẬP NHẬT SỐ LIỆU VẬN ĐỘNG THU TÁI TỤC THEO TUẦN</h3>
+          <p class="text-xs text-rose-200">Nhập số cần vận động và kết quả từng tuần cho BHXH Tự nguyện hoặc BHYT</p>
+        </div>
+        <button onclick="closeTaiTucInputModal()" class="text-white hover:text-rose-300 text-xl font-bold">&times;</button>
+      </div>
+      <div class="p-4 overflow-y-auto flex-1 space-y-4 text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Loại hình thu tái tục:</label>
+            <select id="tt_select_type" onchange="loadUnitTaiTucForm()" class="w-full border border-slate-400 rounded-lg p-2 font-bold outline-none bg-blue-50 text-blue-900">
+              <option value="bhyt">1. Bảo hiểm y tế (BHYT)</option>
+              <option value="bhxh_tn">2. BHXH tự nguyện</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Chọn đơn vị cơ sở:</label>
+            <select id="tt_select_unit" onchange="loadUnitTaiTucForm()" class="w-full border border-slate-400 rounded-lg p-2 font-bold outline-none bg-white text-slate-900"></select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Cần vận động - Đến hạn:</label>
+            <input type="number" id="tt_inp_due" class="w-full border border-slate-400 rounded-lg p-2 font-semibold outline-none bg-white text-slate-900">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Cần vận động - Quá hạn:</label>
+            <input type="number" id="tt_inp_overdue" class="w-full border border-slate-400 rounded-lg p-2 font-semibold outline-none bg-white text-slate-900">
+          </div>
+        </div>
+        <div class="border-t border-slate-200 pt-3">
+          <h5 class="font-bold text-xs text-slate-700 uppercase mb-2">Kết quả vận động 4 tuần trong tháng (So sánh theo tuần):</h5>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-300 space-y-2">
+              <span class="font-bold text-blue-900 block border-b pb-1">Tuần 1</span>
+              <div><label class="text-[11px] text-slate-500">Đến hạn:</label><input type="number" id="tt_w1_due" class="w-full border p-1 rounded font-semibold text-right bg-white text-slate-900"></div>
+              <div><label class="text-[11px] text-slate-500">Quá hạn:</label><input type="number" id="tt_w1_over" class="w-full border p-1 rounded font-semibold text-right bg-white text-slate-900"></div>
+            </div>
+            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-300 space-y-2">
+              <span class="font-bold text-blue-900 block border-b pb-1">Tuần 2</span>
+              <div><label class="text-[11px] text-slate-500">Đến hạn:</label><input type="number" id="tt_w2_due" class="w-full border p-1 rounded font-semibold text-right bg-white text-slate-900"></div>
+              <div><label class="text-[11px] text-slate-500">Quá hạn:</label><input type="number" id="tt_w2_over" class="w-full border p-1 rounded font-semibold text-right bg-white text-slate-900"></div>
+            </div>
+            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-300 space-y-2">
+              <span class="font-bold text-blue-900 block border-b pb-1">Tuần 3</span>
+              <div><label class="text-[11px] text-slate-500">Đến hạn:</label><input type="number" id="tt_w3_due" class="w-full border p-1 rounded font-semibold text-right bg-white text-slate-900"></div>
+              <div><label class="text-[11px] text-slate-500">Quá hạn:</label><input type="number" id="tt_w3_over" class="w-full border p-1 rounded font-semibold text-right bg-white text-slate-900"></div>
+            </div>
+            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-300 space-y-2">
+              <span class="font-bold text-blue-900 block border-b pb-1">Tuần 4</span>
+              <div><label class="text-[11px] text-slate-500">Đến hạn:</label><input type="number" id="tt_w4_due" class="w-full border p-1 rounded font-semibold text-right bg-white text-slate-900"></div>
+              <div><label class="text-[11px] text-slate-500">Quá hạn:</label><input type="number" id="tt_w4_over" class="w-full border p-1 rounded font-semibold text-right bg-white text-slate-900"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-3 bg-slate-100 border-t border-slate-300 flex justify-end gap-2 text-xs">
+        <button onclick="closeTaiTucInputModal()" class="px-4 py-2 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-200">Đóng</button>
+        <button onclick="saveUnitTaiTucData()" class="px-5 py-2 bg-rose-700 hover:bg-rose-800 text-white rounded-lg font-bold shadow">Lưu dữ liệu đơn vị</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: TỔNG HỢP THÁNG -->
+  <div id="modal-monthly-summary" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-300">
+      <div class="px-6 py-4 bg-gradient-to-r from-amber-700 via-indigo-900 to-slate-900 text-white flex justify-between items-center">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 text-lg shadow"><i class="fa-solid fa-calendar-check"></i></div>
+          <div>
+            <h3 class="font-bold text-base">BÁO CÁO TỔNG HỢP KẾT THÚC THÁNG / NĂM</h3>
+            <p class="text-xs text-amber-200" id="summary-modal-subtitle">Tổng hợp lũy kế kết quả thực hiện và so sánh tiến độ hoàn thành</p>
+          </div>
+        </div>
+        <button onclick="closeMonthlySummaryModal()" class="text-white hover:text-amber-300 text-xl font-bold">&times;</button>
+      </div>
+
+      <div class="p-5 overflow-y-auto flex-1 space-y-4 text-xs">
+        <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div>
+            <span class="text-slate-500">Kỳ tổng hợp:</span>
+            <b class="text-base text-slate-900 ml-1" id="summary-period-label">Tháng 9/2026</b>
+          </div>
+          <button onclick="exportMonthlyReportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg font-bold shadow flex items-center gap-1.5"><i class="fa-solid fa-file-excel"></i> Xuất Báo Cáo Tháng (.xlsx)</button>
+        </div>
+
+        <table class="w-full text-xs text-left text-slate-800 data-table">
+          <thead class="text-[11px] bg-slate-200 uppercase font-bold text-slate-900">
+            <tr>
+              <th class="p-2 text-center w-10">TT</th>
+              <th class="p-2 min-w-[120px]">Đơn vị</th>
+              <th class="p-2 text-right bg-blue-100 text-blue-950 font-black">BHXH Bắt buộc</th>
+              <th class="p-2 text-right bg-emerald-100 text-emerald-950 font-black">BHXH Tự nguyện</th>
+              <th class="p-2 text-right bg-indigo-100 text-indigo-950 font-black">BHYT</th>
+              <th class="p-2 text-right bg-amber-100 text-amber-950 font-black">% Đạt Q3 (Trung bình 3 chỉ tiêu)</th>
+              <th class="p-2 text-right bg-slate-100 font-bold">So tháng trước (Tổng 3 chỉ tiêu)</th>
+              <th class="p-2 text-center bg-slate-100 font-bold">Xếp hạng tháng</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-monthly-summary" class="font-medium"></tbody>
+          <tfoot id="tfoot-monthly-summary"></tfoot>
+        </table>
+      </div>
+      <div class="px-6 py-3 bg-slate-100 border-t border-slate-300 flex justify-end">
+        <button onclick="closeMonthlySummaryModal()" class="px-4 py-2 bg-slate-300 hover:bg-slate-400 text-slate-800 font-bold rounded-lg text-xs">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-white border-t border-slate-200 py-3 text-center text-xs text-slate-500 mt-auto">
+    Phòng Quản lý thu và phát triển người tham gia - BHXH tỉnh Hà Tĩnh | Bảng điều hành tiến độ số hóa 2026.
+  </footer>
+
+  <script>
+    const ADMIN_PASSWORD = "Binbo1977a@";
+    let isSessionUnlocked = false;
+
+    function checkAdminPassword() {
+      if (!isSessionUnlocked) {
+        const pwd = prompt("Vui lòng nhập mật khẩu quản trị để thực hiện cập nhật file:");
+        if (pwd !== ADMIN_PASSWORD) {
+          alert("Mật khẩu không chính xác!");
+          return false;
+        }
+        isSessionUnlocked = true;
+      }
+      return true;
+    }
+
+    // Hàm định dạng số nguyên chuẩn triệu đồng (dấu . ngăn cách hàng nghìn)
+    function formatVnInteger(val) {
+      if (val === null || val === undefined || isNaN(val)) return "0";
+      return Math.round(Number(val)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    }
+
+    function formatVnNumber(val, decimals = 2) {
+      if (val === null || val === undefined || isNaN(val)) return "0";
+      const parts = Number(val).toFixed(decimals).split(".");
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      return parts.join(",");
+    }
+
+    function loadStoredData() {
+        try {
+            const savedDaily = localStorage.getItem('bhxh_daily_store');
+            if (savedDaily) DAILY_STORE = JSON.parse(savedDaily);
+
+            const savedHssv = localStorage.getItem('bhxh_hssv_data_v2');
+            if (savedHssv) HSSV_DATA = JSON.parse(savedHssv);
+
+            const savedTn = localStorage.getItem('bhxh_taituc_tn');
+            if (savedTn) TAI_TUC_TN = JSON.parse(savedTn);
+
+            const savedBhyt = localStorage.getItem('bhxh_taituc_bhyt');
+            if (savedBhyt) TAI_TUC_BHYT = JSON.parse(savedBhyt);
+
+            const savedMonth = localStorage.getItem('bhxh_prev_month');
+            if (savedMonth) PREV_MONTH_DATA = JSON.parse(savedMonth);
+
+            const savedSoThu = localStorage.getItem('bhxh_sothu_data');
+            if (savedSoThu) SOTHU_DATA = JSON.parse(savedSoThu);
+
+            const savedGiamNoPlan = localStorage.getItem('bhxh_giamno_plan');
+            if (savedGiamNoPlan) GIAMNO_PLAN = JSON.parse(savedGiamNoPlan);
+
+            const savedGiamNo = localStorage.getItem('bhxh_giamno_data');
+            if (savedGiamNo) GIAMNO_DATA = JSON.parse(savedGiamNo);
+        } catch(e) { console.error('Lỗi đọc localStorage:', e); }
+    }
+
+    function saveStoredData() {
+        try {
+            localStorage.setItem('bhxh_daily_store', JSON.stringify(DAILY_STORE));
+            localStorage.setItem('bhxh_hssv_data_v2', JSON.stringify(HSSV_DATA));
+            localStorage.setItem('bhxh_taituc_tn', JSON.stringify(TAI_TUC_TN));
+            localStorage.setItem('bhxh_taituc_bhyt', JSON.stringify(TAI_TUC_BHYT));
+            localStorage.setItem('bhxh_prev_month', JSON.stringify(PREV_MONTH_DATA));
+            localStorage.setItem('bhxh_sothu_data', JSON.stringify(SOTHU_DATA));
+            localStorage.setItem('bhxh_giamno_plan', JSON.stringify(GIAMNO_PLAN));
+            localStorage.setItem('bhxh_giamno_data', JSON.stringify(GIAMNO_DATA));
+        } catch(e) { console.error('Lỗi lưu localStorage:', e); }
+    }
+
+    const BASE_TARGETS = [
+      { stt: 1, name: "Văn phòng tỉnh", bb: { m1_nam: 30994, m1_q3: 30492, m2_nam: 31083, m2_q3: 30546 }, tn: { m1_nam: 10450, m1_q3: 10132, m2_nam: 10782, m2_q3: 10380 }, bhyt: { m1_nam: 156029, m1_q3: 155672, m2_nam: 156118, m2_q3: 155739 } },
+      { stt: 2, name: "Hồng Lĩnh", bb: { m1_nam: 13146, m1_q3: 12966, m2_nam: 13315, m2_q3: 13067 }, tn: { m1_nam: 10422, m1_q3: 10108, m2_nam: 10653, m2_q3: 10282 }, bhyt: { m1_nam: 116757, m1_q3: 116469, m2_nam: 116926, m2_q3: 116596 } },
+      { stt: 3, name: "Hương Sơn", bb: { m1_nam: 6266, m1_q3: 6084, m2_nam: 6438, m2_q3: 6187 }, tn: { m1_nam: 8576, m1_q3: 8360, m2_nam: 8803, m2_q3: 8530 }, bhyt: { m1_nam: 101364, m1_q3: 101235, m2_nam: 101536, m2_q3: 101364 } },
+      { stt: 4, name: "Đức Thọ", bb: { m1_nam: 8199, m1_q3: 8018, m2_nam: 8383, m2_q3: 8129 }, tn: { m1_nam: 9715, m1_q3: 9458, m2_nam: 9970, m2_q3: 9649 }, bhyt: { m1_nam: 114107, m1_q3: 113976, m2_nam: 114291, m2_q3: 114114 } },
+      { stt: 5, name: "Can Lộc", bb: { m1_nam: 6621, m1_q3: 6482, m2_nam: 6809, m2_q3: 6595 }, tn: { m1_nam: 9906, m1_q3: 9582, m2_nam: 10289, m2_q3: 9869 }, bhyt: { m1_nam: 147260, m1_q3: 147058, m2_nam: 147448, m2_q3: 147199 } },
+      { stt: 6, name: "Hương Khê", bb: { m1_nam: 4984, m1_q3: 4841, m2_nam: 5139, m2_q3: 4934 }, tn: { m1_nam: 6965, m1_q3: 6796, m2_nam: 7223, m2_q3: 6989 }, bhyt: { m1_nam: 89779, m1_q3: 89640, m2_nam: 89934, m2_q3: 89756 } },
+      { stt: 7, name: "Thạch Hà", bb: { m1_nam: 7165, m1_q3: 6931, m2_nam: 7344, m2_q3: 7038 }, tn: { m1_nam: 11763, m1_q3: 11457, m2_nam: 12132, m2_q3: 11734 }, bhyt: { m1_nam: 133187, m1_q3: 132884, m2_nam: 133366, m2_q3: 133018 } },
+      { stt: 8, name: "Cẩm Xuyên", bb: { m1_nam: 5616, m1_q3: 5407, m2_nam: 5809, m2_q3: 5523 }, tn: { m1_nam: 9334, m1_q3: 9076, m2_nam: 9660, m2_q3: 9320 }, bhyt: { m1_nam: 129561, m1_q3: 129328, m2_nam: 129754, m2_q3: 129473 } },
+      { stt: 9, name: "Kỳ Anh", bb: { m1_nam: 30681, m1_q3: 28455, m2_nam: 33676, m2_q3: 30252 }, tn: { m1_nam: 10172, m1_q3: 9830, m2_nam: 10734, m2_q3: 10252 }, bhyt: { m1_nam: 169338, m1_q3: 167796, m2_nam: 172333, m2_q3: 170043 } }
+    ];
+
+    let PREV_MONTH_DATA = {
+      1: { bb: 31163, tn: 10058, bhyt: 159705 },
+      2: { bb: 13667, tn: 10136, bhyt: 117136 },
+      3: { bb: 5830,  tn: 8385,  bhyt: 99996 },
+      4: { bb: 7952,  tn: 8765,  bhyt: 112470 },
+      5: { bb: 6786,  tn: 8621,  bhyt: 145804 },
+      6: { bb: 4786,  tn: 6448,  bhyt: 88108 },
+      7: { bb: 7113,  tn: 10640, bhyt: 131536 },
+      8: { bb: 5420,  tn: 8525,  bhyt: 127537 },
+      9: { bb: 31036, tn: 8632,  bhyt: 166680 }
+    };
+
+    let DAILY_STORE = {
+      "2026-09-20": {
+        1: { bb: 31145, tn: 9768, bhyt: 159074, sothu: 842873, giamno: 52683, giamno_tyle: 0.04 },
+        2: { bb: 13407, tn: 10111, bhyt: 116494, sothu: 341376, giamno: 61809, giamno_tyle: 0.12 },
+        3: { bb: 5837,  tn: 8349,  bhyt: 99514,  sothu: 231461, giamno: 7394,  giamno_tyle: 0.02 },
+        4: { bb: 7259,  tn: 8781,  bhyt: 111465, sothu: 263623, giamno: 11715, giamno_tyle: 0.03 },
+        5: { bb: 6799,  tn: 8550,  bhyt: 145035, sothu: 272433, giamno: 10241, giamno_tyle: 0.02 },
+        6: { bb: 4287,  tn: 6365,  bhyt: 87249,  sothu: 184046, giamno: 4738,  giamno_tyle: 0.01 },
+        7: { bb: 6877,  tn: 10589, bhyt: 130958, sothu: 266290, giamno: 11151, giamno_tyle: 0.03 },
+        8: { bb: 5348,  tn: 8453,  bhyt: 126953, sothu: 245333, giamno: 7521,  giamno_tyle: 0.02 },
+        9: { bb: 30370, tn: 8410,  bhyt: 165313, sothu: 748489, giamno: 22255, giamno_tyle: 0.02 }
+      }
+    };
+
+    let TAI_TUC_TN = {
+      1: { need_due: 320, need_over: 85, w1_due: 80, w1_over: 15, w2_due: 85, w2_over: 20, w3_due: 90, w3_over: 25, w4_due: 0, w4_over: 0 },
+      2: { need_due: 240, need_over: 60, w1_due: 60, w1_over: 12, w2_due: 65, w2_over: 15, w3_due: 70, w3_over: 18, w4_due: 0, w4_over: 0 },
+      3: { need_due: 190, need_over: 45, w1_due: 50, w1_over: 10, w2_due: 55, w2_over: 12, w3_due: 60, w3_over: 10, w4_due: 0, w4_over: 0 },
+      4: { need_due: 230, need_over: 70, w1_due: 55, w1_over: 15, w2_due: 60, w2_over: 18, w3_due: 65, w3_over: 20, w4_due: 0, w4_over: 0 },
+      5: { need_due: 280, need_over: 75, w1_due: 70, w1_over: 16, w2_due: 75, w2_over: 20, w3_due: 80, w3_over: 22, w4_due: 0, w4_over: 0 },
+      6: { need_due: 175, need_over: 50, w1_due: 42, w1_over: 11, w2_due: 45, w2_over: 12, w3_due: 50, w3_over: 15, w4_due: 0, w4_over: 0 },
+      7: { need_due: 270, need_over: 65, w1_due: 68, w1_over: 15, w2_due: 72, w2_over: 18, w3_due: 78, w3_over: 16, w4_due: 0, w4_over: 0 },
+      8: { need_due: 250, need_over: 60, w1_due: 62, w1_over: 14, w2_due: 68, w2_over: 15, w3_due: 74, w3_over: 16, w4_due: 0, w4_over: 0 },
+      9: { need_due: 360, need_over: 95, w1_due: 88, w1_over: 20, w2_due: 95, w2_over: 25, w3_due: 102,w3_over: 28, w4_due: 0, w4_over: 0 }
+    };
+
+    let TAI_TUC_BHYT = {
+      1: { need_due: 1650, need_over: 420, w1_due: 420, w1_over: 80, w2_due: 450, w2_over: 95, w3_due: 480, w3_over: 110, w4_due: 0, w4_over: 0 },
+      2: { need_due: 1200, need_over: 280, w1_due: 310, w1_over: 65, w2_due: 340, w2_over: 70, w3_due: 350, w3_over: 60,  w4_due: 0, w4_over: 0 },
+      3: { need_due: 980,  need_over: 210, w1_due: 250, w1_over: 45, w2_due: 260, w2_over: 50, w3_due: 280, w3_over: 40,  w4_due: 0, w4_over: 0 },
+      4: { need_due: 1150, need_over: 320, w1_due: 270, w1_over: 60, w2_due: 280, w2_over: 75, w3_due: 300, w3_over: 70,  w4_due: 0, w4_over: 0 },
+      5: { need_due: 1420, need_over: 350, w1_due: 360, w1_over: 70, w2_due: 380, w2_over: 85, w3_due: 410, w3_over: 90,  w4_due: 0, w4_over: 0 },
+      6: { need_due: 890,  need_over: 240, w1_due: 210, w1_over: 50, w2_due: 230, w2_over: 55, w3_due: 250, w3_over: 60,  w4_due: 0, w4_over: 0 },
+      7: { need_due: 1350, need_over: 310, w1_due: 350, w1_over: 70, w2_due: 370, w2_over: 80, w3_due: 390, w3_over: 75,  w4_due: 0, w4_over: 0 },
+      8: { need_due: 1280, need_over: 290, w1_due: 320, w1_over: 60, w2_due: 340, w2_over: 70, w3_due: 370, w3_over: 65,  w4_due: 0, w4_over: 0 },
+      9: { need_due: 1880, need_over: 480, w1_due: 450, w1_over: 90, w2_due: 490, w2_over: 110,w3_due: 510, w3_over: 120, w4_due: 0, w4_over: 0 }
+    };
+
+    let HSSV_DATA = {
+      dot1: {
+        1: { schools: 45, students: 30000, other_cards: 1200, need_vd: 28800, joined: 26500 },
+        2: { schools: 22, students: 14200, other_cards: 500, need_vd: 13700, joined: 13500 },
+        3: { schools: 38, students: 18900, other_cards: 800, need_vd: 18100, joined: 17800 },
+        4: { schools: 30, students: 16500, other_cards: 600, need_vd: 15900, joined: 15600 },
+        5: { schools: 42, students: 24000, other_cards: 900, need_vd: 23100, joined: 22800 },
+        6: { schools: 35, students: 15200, other_cards: 400, need_vd: 14800, joined: 14400 },
+        7: { schools: 48, students: 27500, other_cards: 1100, need_vd: 26400, joined: 25800 },
+        8: { schools: 40, students: 23100, other_cards: 850, need_vd: 22250, joined: 21900 },
+        9: { schools: 55, students: 35000, other_cards: 1500, need_vd: 33500, joined: 32500 }
+      },
+      dot2: {
+        1: { schools: 0, students: 0, other_cards: 0, need_vd: 0, joined: 0 },
+        2: { schools: 0, students: 0, other_cards: 0, need_vd: 0, joined: 0 },
+        3: { schools: 0, students: 0, other_cards: 0, need_vd: 0, joined: 0 },
+        4: { schools: 0, students: 0, other_cards: 0, need_vd: 0, joined: 0 },
+        5: { schools: 0, students: 0, other_cards: 0, need_vd: 0, joined: 0 },
+        6: { schools: 0, students: 0, other_cards: 0, need_vd: 0, joined: 0 },
+        7: { schools: 0, students: 0, other_cards: 0, need_vd: 0, joined: 0 },
+        8: { schools: 0, students: 0, other_cards: 0, need_vd: 0, joined: 0 },
+        9: { schools: 0, students: 0, other_cards: 0, need_vd: 0, joined: 0 }
+      }
+    };
+
+    let SOTHU_PLAN = {
+      1: 1230338, 2: 520929, 3: 354496, 4: 418849, 5: 410731, 6: 318828, 7: 417541, 8: 356345, 9: 1081274
+    };
+
+    let GIAMNO_PLAN = {
+      1: { tien: 42266, tyle: 3.44 },
+      2: { tien: 54902, tyle: 10.54 },
+      3: { tien: 2347,  tyle: 0.66 },
+      4: { tien: 4988,  tyle: 1.19 },
+      5: { tien: 5387,  tyle: 1.32 },
+      6: { tien: 1835,  tyle: 0.58 },
+      7: { tien: 7835,  tyle: 1.88 },
+      8: { tien: 6789,  tyle: 1.91 },
+      9: { tien: 10581, tyle: 0.98 }
+    };
+
+    let currentTab = 'dashboard';
+    let currentMoc = 'm1';
+    let currentTaiTucSubTab = 'tn';
+    let currentHssvDot = 'dot1';
+
+    function switchTab(t) {
+      currentTab = t;
+      ['dashboard', 'bhxh_bb', 'bhxh_tn', 'bhyt', 'hssv', 'sothu', 'giamno', 'tai_tuc', 'import_daily', 'config_month'].forEach(id => {
+        const el = document.getElementById('view-' + id);
+        if (el) el.classList.add('hidden');
+        const tabEl = document.getElementById('tab-' + id);
+        if (tabEl) tabEl.classList.remove('tab-active');
+      });
+      document.getElementById('view-' + t).classList.remove('hidden');
+      document.getElementById('tab-' + t).classList.add('tab-active');
+
+      if (t === 'hssv') renderHssvTable();
+      if (t === 'sothu') renderSoThuTable();
+      if (t === 'giamno') renderGiamNoTable();
+      if (t === 'tai_tuc') renderTaiTucTable();
+      if (t === 'config_month') renderConfigMonthTable();
+      if (t === 'dashboard') renderMainTable();
+      if (t === 'bhxh_bb' || t === 'bhxh_tn' || t === 'bhyt') renderSpecialTables();
+    }
+
+    let activeProtectedView = null;
+    function switchProtectedTab(t) {
+      if (!isSessionUnlocked) {
+        activeProtectedView = t;
+        showInlinePasswordScreen(t);
+      } else {
+        switchTab(t);
+      }
+    }
+
+    function showInlinePasswordScreen(t) {
+      ['dashboard', 'bhxh_bb', 'bhxh_tn', 'bhyt', 'hssv', 'sothu', 'giamno', 'tai_tuc', 'import_daily', 'config_month'].forEach(id => {
+        const el = document.getElementById('view-' + id);
+        if (el) el.classList.add('hidden');
+        const tabEl = document.getElementById('tab-' + id);
+        if (tabEl) tabEl.classList.remove('tab-active');
+      });
+      const activeTabBtn = document.getElementById('tab-' + t);
+      if (activeTabBtn) activeTabBtn.classList.add('tab-active');
+
+      const viewEl = document.getElementById('view-' + t);
+      if (viewEl) {
+        viewEl.classList.remove('hidden');
+        viewEl.innerHTML = `
+          <div class="max-w-md mx-auto my-12 bg-white rounded-2xl shadow-xl p-8 border border-slate-300 text-center space-y-4">
+            <div class="w-16 h-16 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto text-2xl font-bold shadow-inner"><i class="fa-solid fa-lock"></i></div>
+            <div>
+              <h3 class="font-black text-slate-900 text-lg uppercase tracking-tight">Khu Vực Bảo Mật Quản Trị</h3>
+              <p class="text-xs text-slate-500 mt-1">Chức năng này yêu cầu mật khẩu quản trị viên để tiếp tục.</p>
+            </div>
+            <div class="space-y-2">
+              <input type="password" id="inlineAdminPwd" placeholder="Nhập mật khẩu quản trị..." class="w-full border border-slate-400 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-600 text-center" onkeydown="if(event.key==='Enter') submitInlinePassword()">
+            </div>
+            <button onclick="submitInlinePassword()" class="w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-xl shadow-md text-sm transition"><i class="fa-solid fa-key mr-1.5"></i> Xác Thực Mật Khẩu</button>
+          </div>
+        `;
+        setTimeout(() => { const inp = document.getElementById('inlineAdminPwd'); if (inp) inp.focus(); }, 100);
+      }
+    }
+
+    function submitInlinePassword() {
+      const pwd = document.getElementById('inlineAdminPwd').value;
+      if (pwd === ADMIN_PASSWORD) {
+        isSessionUnlocked = true;
+        if (activeProtectedView === 'import_daily') restoreImportDailyView();
+        else if (activeProtectedView === 'config_month') restoreConfigMonthView();
+        switchTab(activeProtectedView);
+      } else {
+        alert("Mật khẩu không chính xác! Vui lòng thử lại.");
+        document.getElementById('inlineAdminPwd').value = '';
+        document.getElementById('inlineAdminPwd').focus();
+      }
+    }
+
+    function restoreImportDailyView() {
+      const v = document.getElementById('view-import_daily');
+      if (v) {
+        v.innerHTML = `
+          <div class="border-b border-slate-200 pb-3 flex justify-between items-center">
+            <div>
+              <h4 class="font-bold text-slate-800 text-base"><i class="fa-solid fa-lock text-amber-600 mr-1.5"></i>CẬP NHẬT SỐ LIỆU GỐC & TIẾN ĐỘ THEO NGÀY (.XLSX)</h4>
+              <p class="text-xs text-slate-500">Cập nhật tự động bằng file Excel chuyên dụng cho các đơn vị.</p>
+            </div>
+            <button onclick="lockCurrentSession()" class="text-xs text-rose-600 hover:underline font-bold"><i class="fa-solid fa-arrow-right-from-bracket"></i> Khóa tab</button>
+          </div>
+          <div class="space-y-4 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Ngày chốt số liệu mới:</label>
+                <input type="date" id="newDailyDate" value="2026-09-21" class="w-full border border-slate-400 rounded-lg p-2 font-medium outline-none focus:ring-2 focus:ring-blue-500">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Chọn file Excel (.xlsx):</label>
+                <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" onchange="handleExcelFileUpload(event)" class="w-full border border-slate-400 rounded-lg p-1.5 font-medium outline-none bg-white cursor-pointer">
+              </div>
+            </div>
+            <div class="flex justify-between items-center pt-2">
+              <button onclick="downloadExcelTemplate()" class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg font-bold shadow flex items-center gap-1.5 transition text-xs">
+                <i class="fa-solid fa-download"></i> Tải file Excel mẫu tiến độ ngày (.xlsx)
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function restoreConfigMonthView() {
+      const v = document.getElementById('view-config_month');
+      if (v) {
+        v.innerHTML = `
+          <div class="border-b border-slate-200 pb-3 flex justify-between items-center">
+            <div>
+              <h4 class="font-bold text-slate-800 text-base"><i class="fa-solid fa-lock text-purple-600 mr-1.5"></i>CẤU HÌNH MỐC THÁNG TRƯỚC & CHỈ TIÊU DƯ NỢ</h4>
+              <p class="text-xs text-slate-500">Khu vực bảo mật | Chỉnh sửa mốc tháng trước và cấu hình giao chỉ tiêu giảm nợ.</p>
+            </div>
+            <button onclick="lockCurrentSession()" class="text-xs text-rose-600 hover:underline font-bold"><i class="fa-solid fa-arrow-right-from-bracket"></i> Khóa tab</button>
+          </div>
+
+          <div class="space-y-2">
+            <h5 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-calendar-days text-purple-600 mr-1"></i> 1. Cấu hình mốc tháng trước (9 đơn vị)</h5>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left text-slate-800 data-table">
+                <thead class="text-[11px] bg-slate-200 uppercase font-bold text-slate-900">
+                  <tr>
+                    <th class="p-2 text-center w-10">STT</th>
+                    <th class="p-2 min-w-[130px]">Đơn vị</th>
+                    <th class="p-2 text-right">BHXH Bắt buộc tháng trước</th>
+                    <th class="p-2 text-right">BHXH Tự nguyện tháng trước</th>
+                    <th class="p-2 text-right">BHYT tháng trước</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-config-month"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <h5 class="font-bold text-xs text-slate-700 uppercase"><i class="fa-solid fa-scale-balanced text-amber-600 mr-1"></i> 2. Cấu hình chỉ tiêu Giao Giảm Nợ Quý 3 (Triệu đồng & Tỷ lệ %)</h5>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left text-slate-800 data-table">
+                <thead class="text-[11px] bg-slate-200 uppercase font-bold text-slate-900">
+                  <tr>
+                    <th class="p-2 text-center w-10">STT</th>
+                    <th class="p-2 min-w-[130px]">Đơn vị</th>
+                    <th class="p-2 text-right">Số giao giảm nợ (Triệu đồng)</th>
+                    <th class="p-2 text-right">Tỷ lệ giao (%)</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-config-giamno"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-2">
+            <button onclick="saveMonthAndGiamNoBenchmark()" class="px-5 py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-lg shadow flex items-center gap-1.5 text-xs"><i class="fa-solid fa-floppy-disk"></i> Lưu Tất Cả Cấu Hình</button>
+          </div>
+        `;
+        renderConfigMonthTable();
+      }
+    }
+
+    function lockCurrentSession() {
+      isSessionUnlocked = false;
+      switchTab('dashboard');
+    }
+
+    function setMoc(m) {
+      currentMoc = m;
+      if (m === 'm1') {
+        document.getElementById('btn-moc1').className = "px-3 py-1 rounded-md text-xs transition moc-btn-active";
+        document.getElementById('btn-moc2').className = "px-3 py-1 rounded-md text-xs transition text-slate-300 hover:text-white";
+        document.getElementById('header-col-bb').innerText = "BHXH Bắt Buộc (Mức 1)";
+        document.getElementById('header-col-tn').innerText = "BHXH Tự Nguyện (Mức 1)";
+        document.getElementById('header-col-bhyt').innerText = "Bảo Hiểm Y Tế (Mức 1)";
+      } else {
+        document.getElementById('btn-moc2').className = "px-3 py-1 rounded-md text-xs transition moc-btn-active";
+        document.getElementById('btn-moc1').className = "px-3 py-1 rounded-md text-xs transition text-slate-300 hover:text-white";
+        document.getElementById('header-col-bb').innerText = "BHXH Bắt Buộc (Mức 2)";
+        document.getElementById('header-col-tn').innerText = "BHXH Tự Nguyện (Mức 2)";
+        document.getElementById('header-col-bhyt').innerText = "Bảo Hiểm Y Tế (Mức 2)";
+      }
+      refreshAll();
+    }
+
+    function onDateChanged() { refreshAll(); }
+
+    function getProcessedData() {
+      const dates = Object.keys(DAILY_STORE).sort();
+      const defaultDate = dates.length > 0 ? dates[dates.length - 1] : '2026-09-20';
+      const curDate = (document.getElementById('selectDate') && document.getElementById('selectDate').value) || defaultDate;
+      
+      const pMonth = PREV_MONTH_DATA;
+      const isBaseDate = (curDate === dates[0]);
+
+      let list = BASE_TARGETS.map(t => {
+        const cur = (DAILY_STORE[curDate] && DAILY_STORE[curDate][t.stt]) || { bb:0, tn:0, bhyt:0, sothu:0, giamno:0, giamno_tyle:0 };
+        const pm = pMonth[t.stt] || { bb:0, tn:0, bhyt:0 };
+
+        const delta_month_bb = cur.bb - pm.bb;
+        const delta_month_tn = cur.tn - pm.tn;
+        const delta_month_bhyt = cur.bhyt - pm.bhyt;
+
+        const bb_q3 = (currentMoc === 'm1') ? t.bb.m1_q3 : t.bb.m2_q3;
+        const bb_nam = (currentMoc === 'm1') ? t.bb.m1_nam : t.bb.m2_nam;
+        const rate_bb_q3 = bb_q3 > 0 ? parseFloat(((cur.bb / bb_q3) * 100).toFixed(2)) : 0;
+        const rate_bb_nam = bb_nam > 0 ? parseFloat(((cur.bb / bb_nam) * 100).toFixed(2)) : 0;
+        const rem_bb_q3 = bb_q3 - cur.bb;
+        const rem_bb_nam = bb_nam - cur.bb;
+
+        const tn_q3 = (currentMoc === 'm1') ? t.tn.m1_q3 : t.tn.m2_q3;
+        const tn_nam = (currentMoc === 'm1') ? t.tn.m1_nam : t.tn.m2_nam;
+        const rate_tn_q3 = tn_q3 > 0 ? parseFloat(((cur.tn / tn_q3) * 100).toFixed(2)) : 0;
+        const rate_tn_nam = tn_nam > 0 ? parseFloat(((cur.tn / tn_nam) * 100).toFixed(2)) : 0;
+        const rem_tn_q3 = tn_q3 - cur.tn;
+        const rem_tn_nam = tn_nam - cur.tn;
+
+        const bhyt_q3 = (currentMoc === 'm1') ? t.bhyt.m1_q3 : t.bhyt.m2_q3;
+        const bhyt_nam = (currentMoc === 'm1') ? t.bhyt.m1_nam : t.bhyt.m2_nam;
+        const rate_bhyt_q3 = bhyt_q3 > 0 ? parseFloat(((cur.bhyt / bhyt_q3) * 100).toFixed(2)) : 0;
+        const rate_bhyt_nam = bhyt_nam > 0 ? parseFloat(((cur.bhyt / bhyt_nam) * 100).toFixed(2)) : 0;
+        const rem_bhyt_q3 = bhyt_q3 - cur.bhyt;
+        const rem_bhyt_nam = bhyt_nam - cur.bhyt;
+
+        return {
+          stt: t.stt, name: t.name, cur,
+          bb_q3, bb_nam, rate_bb_q3, rate_bb_nam, rem_bb_q3, rem_bb_nam, delta_month_bb,
+          tn_q3, tn_nam, rate_tn_q3, rate_tn_nam, rem_tn_q3, rem_tn_nam, delta_month_tn,
+          bhyt_q3, bhyt_nam, rate_bhyt_q3, rate_bhyt_nam, rem_bhyt_q3, rem_bhyt_nam, delta_month_bhyt
+        };
+      });
+      return { list, isBaseDate, curDate };
+    }
+
+    function refreshAll() {
+      const selectDateEl = document.getElementById('selectDate');
+      if (selectDateEl) {
+        const currentVal = selectDateEl.value;
+        const dates = Object.keys(DAILY_STORE).sort();
+        const sortedDates = [...dates].reverse();
+
+        selectDateEl.innerHTML = '';
+        sortedDates.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d;
+          opt.text = d + (d === dates[0] ? ' (Số liệu gốc)' : ' (Cập nhật)');
+          selectDateEl.appendChild(opt);
+        });
+
+        if (sortedDates.length > 0) {
+          selectDateEl.value = sortedDates[0];
+          const parts = sortedDates[0].split('-');
+          if (parts.length === 3) {
+            const mViet = document.getElementById('selectMonthViet');
+            const yViet = document.getElementById('selectYearViet');
+            if (mViet) mViet.value = parseInt(parts[1], 10);
+            if (yViet) yViet.value = parts[0];
+          }
+        }
+        if (currentVal && DAILY_STORE[currentVal]) {
+          selectDateEl.value = currentVal;
+        }
+      }
+
+      renderMainTable();
+      renderSpecialTables();
+      renderTaiTucTable();
+      renderHssvTable();
+      renderSoThuTable();
+      renderGiamNoTable();
+    }
+
+    function getSortedList() {
+      const { list } = getProcessedData();
+      let sorted = [...list];
+      sorted.forEach(item => {
+        item.avg_composite_rate = parseFloat(((item.rate_bb_q3 + item.rate_tn_q3 + item.rate_bhyt_q3) / 3).toFixed(2));
+      });
+      sorted.sort((a, b) => b.avg_composite_rate - a.avg_composite_rate);
+      return sorted;
+    }
+
+    function renderMainTable() {
+      const sortedList = getSortedList();
+      const { isBaseDate } = getProcessedData();
+      const tbody = document.getElementById('tbody-main');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      let tot = { bb_q3:0, bb_th:0, rem_bb_q3:0, tn_q3:0, tn_th:0, rem_tn_q3:0, bhyt_q3:0, bhyt_th:0, rem_bhyt_q3:0, delta_day:0, delta_month:0 };
+      let sum_rate_bb_q3 = 0, sum_rate_tn_q3 = 0, sum_rate_bhyt_q3 = 0;
+      let sum_rate_bb_nam = 0, sum_rate_tn_nam = 0, sum_rate_bhyt_nam = 0;
+
+      sortedList.forEach((item, index) => {
+        tot.bb_q3 += (item.bb_q3 || 0); tot.bb_th += (item.cur.bb || 0); tot.rem_bb_q3 += (item.rem_bb_q3 || 0);
+        tot.tn_q3 += (item.tn_q3 || 0); tot.tn_th += (item.cur.tn || 0); tot.rem_tn_q3 += (item.rem_tn_q3 || 0);
+        tot.bhyt_q3 += (item.bhyt_q3 || 0); tot.bhyt_th += (item.cur.bhyt || 0); tot.rem_bhyt_q3 += (item.rem_bhyt_q3 || 0);
+        tot.delta_month += ((item.delta_month_bb || 0) + (item.delta_month_tn || 0) + (item.delta_month_bhyt || 0));
+
+        sum_rate_bb_q3 += item.rate_bb_q3; sum_rate_tn_q3 += item.rate_tn_q3; sum_rate_bhyt_q3 += item.rate_bhyt_q3;
+        sum_rate_bb_nam += item.rate_bb_nam; sum_rate_tn_nam += item.rate_tn_nam; sum_rate_bhyt_nam += item.rate_bhyt_nam;
+
+        const c_bb = item.rate_bb_q3 >= 100 ? 'val-good' : (item.rate_bb_q3 >= 95 ? 'val-warning' : 'val-danger');
+        const c_tn = item.rate_tn_q3 >= 95 ? 'val-good' : (item.rate_tn_q3 >= 90 ? 'val-warning' : 'val-danger');
+        const c_bhyt = item.rate_bhyt_q3 >= 98 ? 'val-good' : (item.rate_bhyt_q3 >= 95 ? 'val-warning' : 'val-danger');
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition";
+        tr.innerHTML = `
+          <td class="p-2 text-center text-slate-500 font-bold">${index + 1}</td>
+          <td class="p-2 font-bold text-slate-900">${item.name}</td>
+          <td class="p-2 text-right text-slate-700">${(item.bb_q3 || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right font-bold text-blue-900">${(item.cur.bb || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right ${c_bb}">${formatVnNumber(item.rate_bb_q3, 2)}%</td>
+          <td class="p-2 text-right text-slate-700">${formatVnNumber(item.rate_bb_nam, 2)}%</td>
+          <td class="p-2 text-right ${item.rem_bb_q3 <= 0 ? 'val-good' : 'text-slate-700'}">${(item.rem_bb_q3 || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right text-slate-700">${(item.tn_q3 || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right font-bold text-emerald-900">${(item.cur.tn || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right ${c_tn}">${formatVnNumber(item.rate_tn_q3, 2)}%</td>
+          <td class="p-2 text-right text-slate-700">${formatVnNumber(item.rate_tn_nam, 2)}%</td>
+          <td class="p-2 text-right ${item.rem_tn_q3 <= 0 ? 'val-good' : 'text-slate-700'}">${(item.rem_tn_q3 || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right text-slate-700">${(item.bhyt_q3 || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right font-bold text-indigo-900">${(item.cur.bhyt || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right ${c_bhyt}">${formatVnNumber(item.rate_bhyt_q3, 2)}%</td>
+          <td class="p-2 text-right text-slate-700">${formatVnNumber(item.rate_bhyt_nam, 2)}%</td>
+          <td class="p-2 text-right ${item.rem_bhyt_q3 <= 0 ? 'val-good' : 'text-slate-700'}">${(item.rem_bhyt_q3 || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right font-bold text-slate-400">0</td>
+          <td class="p-2 text-right font-bold ${((item.delta_month_bb || 0) + (item.delta_month_tn || 0) + (item.delta_month_bhyt || 0)) >= 0 ? 'val-good' : 'val-danger'}">${(((item.delta_month_bb || 0) + (item.delta_month_tn || 0) + (item.delta_month_bhyt || 0)) >= 0 ? '+' : '') + ((item.delta_month_bb || 0) + (item.delta_month_tn || 0) + (item.delta_month_bhyt || 0)).toLocaleString('vi-VN')}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const avg_rate_bb_q3 = (sum_rate_bb_q3 / sortedList.length).toFixed(2);
+      const avg_rate_bb_nam = (sum_rate_bb_nam / sortedList.length).toFixed(2);
+      const avg_rate_tn_q3 = (sum_rate_tn_q3 / sortedList.length).toFixed(2);
+      const avg_rate_tn_nam = (sum_rate_tn_nam / sortedList.length).toFixed(2);
+      const avg_rate_bhyt_q3 = (sum_rate_bhyt_q3 / sortedList.length).toFixed(2);
+      const avg_rate_bhyt_nam = (sum_rate_bhyt_nam / sortedList.length).toFixed(2);
+
+      const tfoot = document.getElementById('tfoot-main');
+      if (tfoot) {
+        tfoot.innerHTML = `
+          <tr class="total-row text-slate-900">
+            <td class="p-2 text-center" colspan="2">TỔNG CỘNG</td>
+            <td class="p-2 text-right">${tot.bb_q3.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right text-blue-950">${tot.bb_th.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right val-good">${formatVnNumber(avg_rate_bb_q3, 2)}%</td>
+            <td class="p-2 text-right text-slate-900">${formatVnNumber(avg_rate_bb_nam, 2)}%</td>
+            <td class="p-2 text-right val-good">${tot.rem_bb_q3.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">${tot.tn_q3.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right text-emerald-950">${tot.tn_th.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right val-warning">${formatVnNumber(avg_rate_tn_q3, 2)}%</td>
+            <td class="p-2 text-right text-slate-900">${formatVnNumber(avg_rate_tn_nam, 2)}%</td>
+            <td class="p-2 text-right text-slate-800">${tot.rem_tn_q3.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">${tot.bhyt_q3.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right text-indigo-950">${tot.bhyt_th.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right val-good">${formatVnNumber(avg_rate_bhyt_q3, 2)}%</td>
+            <td class="p-2 text-right text-slate-900">${formatVnNumber(avg_rate_bhyt_nam, 2)}%</td>
+            <td class="p-2 text-right text-slate-800">${tot.rem_bhyt_q3.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">0</td>
+            <td class="p-2 text-right val-danger">${(tot.delta_month>=0?'+':'') + tot.delta_month.toLocaleString('vi-VN')}</td>
+          </tr>
+        `;
+      }
+    }
+
+    function renderSpecialTables() {
+      const { list } = getProcessedData();
+      const tbodyBB = document.getElementById('tbody-bhxh_bb');
+      if (tbodyBB) {
+        tbodyBB.innerHTML = '';
+        let sortedBB = [...list].sort((a, b) => b.rate_bb_q3 - a.rate_bb_q3);
+        let totBB = { th:0, nam:0, q3:0, rem_q3:0, rem_nam:0, d_month:0 };
+        sortedBB.forEach((item, idx) => {
+          totBB.th += (item.cur.bb || 0); totBB.nam += (item.bb_nam || 0);
+          totBB.q3 += (item.bb_q3 || 0); totBB.rem_q3 += (item.rem_bb_q3 || 0); totBB.rem_nam += (item.rem_bb_nam || 0);
+          totBB.d_month += (item.delta_month_bb || 0);
+          const c = item.rate_bb_q3 >= 100 ? 'val-good' : (item.rate_bb_q3 >= 95 ? 'val-warning' : 'val-danger');
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-50";
+          tr.innerHTML = `
+            <td class="p-2 text-center font-bold text-slate-500">${idx + 1}</td>
+            <td class="p-2 font-bold text-slate-900">${item.name}</td>
+            <td class="p-2 text-right font-bold text-blue-900 bg-blue-50/50">${(item.cur.bb || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right font-bold text-slate-400">0</td>
+            <td class="p-2 text-right text-slate-700">${(item.bb_nam || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right text-slate-700">${(item.bb_q3 || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right ${c}">${formatVnNumber(item.rate_bb_q3, 2)}%</td>
+            <td class="p-2 text-right text-slate-700">${formatVnNumber(item.rate_bb_nam, 2)}%</td>
+            <td class="p-2 text-right ${item.rem_bb_q3 <= 0 ? 'val-good' : 'text-slate-700'}">${(item.rem_bb_q3 || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right text-slate-700">${(item.rem_bb_nam || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right font-semibold ${item.delta_month_bb >= 0 ? 'val-good' : 'val-danger'}">${(item.delta_month_bb>=0?'+':'') + item.delta_month_bb.toLocaleString('vi-VN')}</td>
+          `;
+          tbodyBB.appendChild(tr);
+        });
+        document.getElementById('tfoot-bhxh_bb').innerHTML = `
+          <tr class="total-row text-slate-900">
+            <td class="p-2 text-center" colspan="2">TỔNG CỘNG</td>
+            <td class="p-2 text-right text-blue-950">${totBB.th.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">0</td>
+            <td class="p-2 text-right">${totBB.nam.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">${totBB.q3.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right val-good">${totBB.q3 > 0 ? ((totBB.th/totBB.q3)*100).toFixed(2) : '0.00'}%</td>
+            <td class="p-2 text-right">${totBB.nam > 0 ? ((totBB.th/totBB.nam)*100).toFixed(2) : '0.00'}%</td>
+            <td class="p-2 text-right val-good">${totBB.rem_q3.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">${totBB.rem_nam.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right val-danger">${(totBB.d_month>=0?'+':'') + totBB.d_month.toLocaleString('vi-VN')}</td>
+          </tr>
+        `;
+      }
+
+      const tbodyTN = document.getElementById('tbody-bhxh_tn');
+      if (tbodyTN) {
+        tbodyTN.innerHTML = '';
+        let sortedTN = [...list].sort((a, b) => b.rate_tn_q3 - a.rate_tn_q3);
+        let totTN = { th:0, nam:0, q3:0, rem_q3:0, rem_nam:0, d_month:0 };
+        sortedTN.forEach((item, idx) => {
+          totTN.th += (item.cur.tn || 0); totTN.nam += (item.tn_nam || 0);
+          totTN.q3 += (item.tn_q3 || 0); totTN.rem_q3 += (item.rem_tn_q3 || 0); totTN.rem_nam += (item.rem_tn_nam || 0);
+          totTN.d_month += (item.delta_month_tn || 0);
+          const c = item.rate_tn_q3 >= 95 ? 'val-good' : (item.rate_tn_q3 >= 90 ? 'val-warning' : 'val-danger');
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-50";
+          tr.innerHTML = `
+            <td class="p-2 text-center font-bold text-slate-500">${idx + 1}</td>
+            <td class="p-2 font-bold text-slate-900">${item.name}</td>
+            <td class="p-2 text-right font-bold text-emerald-900 bg-emerald-50/50">${(item.cur.tn || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right font-bold text-slate-400">0</td>
+            <td class="p-2 text-right text-slate-700">${(item.tn_nam || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right text-slate-700">${(item.tn_q3 || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right ${c}">${formatVnNumber(item.rate_tn_q3, 2)}%</td>
+            <td class="p-2 text-right text-slate-700">${formatVnNumber(item.rate_tn_nam, 2)}%</td>
+            <td class="p-2 text-right ${item.rem_tn_q3 <= 0 ? 'val-good' : 'text-slate-700'}">${(item.rem_tn_q3 || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right text-slate-700">${(item.rem_tn_nam || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right font-semibold ${item.delta_month_tn >= 0 ? 'val-good' : 'val-danger'}">${(item.delta_month_tn>=0?'+':'') + item.delta_month_tn.toLocaleString('vi-VN')}</td>
+          `;
+          tbodyTN.appendChild(tr);
+        });
+        document.getElementById('tfoot-bhxh_tn').innerHTML = `
+          <tr class="total-row text-slate-900">
+            <td class="p-2 text-center" colspan="2">TỔNG CỘNG</td>
+            <td class="p-2 text-right text-emerald-950">${totTN.th.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">0</td>
+            <td class="p-2 text-right">${totTN.nam.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">${totTN.q3.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right val-warning">${totTN.q3 > 0 ? ((totTN.th/totTN.q3)*100).toFixed(2) : '0.00'}%</td>
+            <td class="p-2 text-right">${totTN.nam > 0 ? ((totTN.th/totTN.nam)*100).toFixed(2) : '0.00'}%</td>
+            <td class="p-2 text-right text-slate-800">${totTN.rem_q3.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">${totTN.rem_nam.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right val-danger">${(totTN.d_month>=0?'+':'') + totTN.d_month.toLocaleString('vi-VN')}</td>
+          </tr>
+        `;
+      }
+
+      const tbodyBHYT = document.getElementById('tbody-bhyt');
+      if (tbodyBHYT) {
+        tbodyBHYT.innerHTML = '';
+        let sortedBHYT = [...list].sort((a, b) => b.rate_bhyt_q3 - a.rate_bhyt_q3);
+        let totBHYT = { th:0, nam:0, q3:0, rem_q3:0, rem_nam:0, d_month:0 };
+        sortedBHYT.forEach((item, idx) => {
+          totBHYT.th += (item.cur.bhyt || 0); totBHYT.nam += (item.bhyt_nam || 0);
+          totBHYT.q3 += (item.bhyt_q3 || 0); totBHYT.rem_q3 += (item.rem_bhyt_q3 || 0); totBHYT.rem_nam += (item.rem_bhyt_nam || 0);
+          totBHYT.d_month += (item.delta_month_bhyt || 0);
+          const c = item.rate_bhyt_q3 >= 98 ? 'val-good' : (item.rate_bhyt_q3 >= 95 ? 'val-warning' : 'val-danger');
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-50";
+          tr.innerHTML = `
+            <td class="p-2 text-center font-bold text-slate-500">${idx + 1}</td>
+            <td class="p-2 font-bold text-slate-900">${item.name}</td>
+            <td class="p-2 text-right font-bold text-indigo-900 bg-indigo-50/50">${(item.cur.bhyt || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right font-bold text-slate-400">0</td>
+            <td class="p-2 text-right text-slate-700">${(item.bhyt_nam || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right text-slate-700">${(item.bhyt_q3 || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right ${c}">${formatVnNumber(item.rate_bhyt_q3, 2)}%</td>
+            <td class="p-2 text-right text-slate-700">${formatVnNumber(item.rate_bhyt_nam, 2)}%</td>
+            <td class="p-2 text-right ${item.rem_bhyt_q3 <= 0 ? 'val-good' : 'text-slate-700'}">${(item.rem_bhyt_q3 || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right text-slate-700">${(item.rem_bhyt_nam || 0).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right font-semibold ${item.delta_month_bhyt >= 0 ? 'val-good' : 'val-danger'}">${(item.delta_month_bhyt>=0?'+':'') + item.delta_month_bhyt.toLocaleString('vi-VN')}</td>
+          `;
+          tbodyBHYT.appendChild(tr);
+        });
+        document.getElementById('tfoot-bhyt').innerHTML = `
+          <tr class="total-row text-slate-900">
+            <td class="p-2 text-center" colspan="2">TỔNG CỘNG</td>
+            <td class="p-2 text-right text-indigo-950">${totBHYT.th.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">0</td>
+            <td class="p-2 text-right">${totBHYT.nam.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">${totBHYT.q3.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right val-good">${totBHYT.q3 > 0 ? ((totBHYT.th/totBHYT.q3)*100).toFixed(2) : '0.00'}%</td>
+            <td class="p-2 text-right">${totBHYT.nam > 0 ? ((totBHYT.th/totBHYT.nam)*100).toFixed(2) : '0.00'}%</td>
+            <td class="p-2 text-right val-good">${totBHYT.rem_q3.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">${totBHYT.rem_nam.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right val-danger">${(totBHYT.d_month>=0?'+':'') + totBHYT.d_month.toLocaleString('vi-VN')}</td>
+          </tr>
+        `;
+      }
+    }
+
+    // --- SỐ THU TAB ---
+    function renderSoThuTable() {
+      const { list, curDate } = getProcessedData();
+      const tbody = document.getElementById('tbody-sothu');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      const hdr = document.getElementById('th-sothu-date-header');
+      if (hdr) hdr.innerText = `Số thực hiện đến ${curDate}`;
+
+      let tot = { plan: 0, actual: 0, rem: 0 };
+
+      list.forEach((item, idx) => {
+        const plan = SOTHU_PLAN[item.stt] || 0;
+        const actual = item.cur.sothu || 0;
+        const rate = plan > 0 ? parseFloat(((actual / plan) * 100).toFixed(2)) : 0;
+        const rem = parseFloat((plan - actual).toFixed(3));
+
+        tot.plan += plan;
+        tot.actual += actual;
+        tot.rem += rem;
+
+        const c_rate = rate >= 75 ? 'val-good' : (rate >= 65 ? 'val-warning' : 'val-danger');
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50";
+        tr.innerHTML = `
+          <td class="p-2 text-center font-bold text-slate-500">${idx + 1}</td>
+          <td class="p-2 font-bold text-slate-900">${item.name}</td>
+          <td class="p-2 text-right text-slate-700">${formatVnInteger(plan)}</td>
+          <td class="p-2 text-right font-bold text-emerald-950 bg-emerald-50/40">${formatVnInteger(actual)}</td>
+          <td class="p-2 text-right font-bold ${c_rate}">${formatVnNumber(rate, 2)}%</td>
+          <td class="p-2 text-right text-slate-700">${formatVnInteger(rem)}</td>
+          <td class="p-2 text-center">
+            <button onclick="editSoThu(${item.stt})" class="text-blue-600 hover:text-blue-800 font-bold px-1"><i class="fa-solid fa-pen"></i> Sửa</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const tot_rate = tot.plan > 0 ? (tot.actual / tot.plan) * 100 : 0;
+      const tfoot = document.getElementById('tfoot-sothu');
+      if (tfoot) {
+        tfoot.innerHTML = `
+          <tr class="total-row text-slate-900">
+            <td class="p-2 text-center" colspan="2">TỔNG CỘNG</td>
+            <td class="p-2 text-right">${formatVnInteger(tot.plan)}</td>
+            <td class="p-2 text-right text-emerald-950">${formatVnInteger(tot.actual)}</td>
+            <td class="p-2 text-right val-good">${formatVnNumber(tot_rate, 2)}%</td>
+            <td class="p-2 text-right">${formatVnInteger(tot.rem)}</td>
+            <td class="p-2 text-center">-</td>
+          </tr>
+        `;
+      }
+    }
+
+    function editSoThu(stt) {
+      if (!checkAdminPassword()) return;
+      const curDate = document.getElementById('selectDate').value;
+      if (!DAILY_STORE[curDate]) DAILY_STORE[curDate] = {};
+      if (!DAILY_STORE[curDate][stt]) DAILY_STORE[curDate][stt] = { bb:0, tn:0, bhyt:0, sothu:0, giamno:0, giamno_tyle:0 };
+
+      const u = BASE_TARGETS.find(x => x.stt === stt);
+      const val = prompt(`Nhập số thu thực hiện (Triệu đồng, ví dụ: 842873) cho ${u.name} ngày ${curDate}:`, DAILY_STORE[curDate][stt].sothu || 0);
+      if (val !== null) {
+        DAILY_STORE[curDate][stt].sothu = parseFloat(val) || 0;
+        saveStoredData();
+        renderSoThuTable();
+        alert("Đã cập nhật số thu thành công!");
+      }
+    }
+
+    // --- GIẢM NỢ TAB (ĐÃ ĐIỀU CHỈNH DÒNG TỔNG THEO YÊU CẦU) ---
+    function renderGiamNoTable() {
+      const { list } = getProcessedData();
+      const tbody = document.getElementById('tbody-giamno');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      let tot = { giao_tien: 0, thuchien_tien: 0, conlai_tien: 0 };
+
+      list.forEach((item, idx) => {
+        const p = GIAMNO_PLAN[item.stt] || { tien: 0, tyle: 0 };
+        const actual = item.cur.giamno || 0;
+        const actual_tyle = item.cur.giamno_tyle !== undefined ? item.cur.giamno_tyle : 0;
+
+        const conlai_tien = parseFloat((p.tien - actual).toFixed(3));
+        const conlai_tyle = parseFloat((p.tyle - actual_tyle).toFixed(2));
+
+        tot.giao_tien += p.tien;
+        tot.thuchien_tien += actual;
+        tot.conlai_tien += conlai_tien;
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50";
+        tr.innerHTML = `
+          <td class="p-2 text-center font-bold text-slate-500">${idx + 1}</td>
+          <td class="p-2 font-bold text-slate-900">${item.name}</td>
+          <td class="p-2 text-right text-slate-700">${formatVnInteger(p.tien)}</td>
+          <td class="p-2 text-right text-slate-700">${formatVnNumber(p.tyle, 2)}%</td>
+          <td class="p-2 text-right font-bold text-emerald-950 bg-emerald-50/40">${formatVnInteger(actual)}</td>
+          <td class="p-2 text-right font-bold text-emerald-900">${formatVnNumber(actual_tyle, 2)}%</td>
+          <td class="p-2 text-right text-slate-700">${formatVnInteger(conlai_tien)}</td>
+          <td class="p-2 text-right font-semibold text-slate-800">${formatVnNumber(conlai_tyle, 2)}%</td>
+          <td class="p-2 text-center">
+            <button onclick="editGiamNo(${item.stt})" class="text-blue-600 hover:text-blue-800 font-bold px-1"><i class="fa-solid fa-pen"></i> Sửa</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // ĐIỀU CHỈNH: Tính tổng tỷ lệ giao và tỷ lệ thực hiện dựa trên dự toán thu được giao là 5.109.331
+      const duToanThuGiao = 5109331;
+      let tot_giao_tyle = tot.giao_tien > 0 ? (tot.giao_tien / duToanThuGiao) * 100 : 0;
+      let tot_actual_tyle = tot.thuchien_tien > 0 ? (tot.thuchien_tien / duToanThuGiao) * 100 : 0;
+      let tot_conlai_tyle = tot_giao_tyle - tot_actual_tyle;
+
+      const tfoot = document.getElementById('tfoot-giamno');
+      if (tfoot) {
+        tfoot.innerHTML = `
+          <tr class="total-row text-slate-900">
+            <td class="p-2 text-center" colspan="2">TỔNG CỘNG</td>
+            <td class="p-2 text-right">${formatVnInteger(tot.giao_tien)}</td>
+            <td class="p-2 text-right">${formatVnNumber(tot_giao_tyle, 2)}%</td>
+            <td class="p-2 text-right text-emerald-950">${formatVnInteger(tot.thuchien_tien)}</td>
+            <td class="p-2 text-right text-emerald-900">${formatVnNumber(tot_actual_tyle, 2)}%</td>
+            <td class="p-2 text-right">${formatVnInteger(tot.conlai_tien)}</td>
+            <td class="p-2 text-right text-slate-900">${formatVnNumber(tot_conlai_tyle, 2)}%</td>
+            <td class="p-2 text-center">-</td>
+          </tr>
+        `;
+      }
+    }
+
+    function editGiamNo(stt) {
+      if (!checkAdminPassword()) return;
+      const curDate = document.getElementById('selectDate').value;
+      if (!DAILY_STORE[curDate]) DAILY_STORE[curDate] = {};
+      if (!DAILY_STORE[curDate][stt]) DAILY_STORE[curDate][stt] = { bb:0, tn:0, bhyt:0, sothu:0, giamno:0, giamno_tyle:0 };
+
+      const u = BASE_TARGETS.find(x => x.stt === stt);
+      const valTien = prompt(`Nhập số giảm nợ thực hiện (Triệu đồng, ví dụ: 52683) cho ${u.name}:`, DAILY_STORE[curDate][stt].giamno || 0);
+      if (valTien === null) return;
+      const valTyle = prompt(`Nhập tỷ lệ thực hiện (%) cho ${u.name}:`, DAILY_STORE[curDate][stt].giamno_tyle || 0);
+      if (valTyle === null) return;
+
+      DAILY_STORE[curDate][stt].giamno = parseFloat(valTien) || 0;
+      DAILY_STORE[curDate][stt].giamno_tyle = parseFloat(valTyle) || 0;
+      saveStoredData();
+      renderGiamNoTable();
+      alert("Đã cập nhật giảm nợ thành công!");
+    }
+
+    function downloadGiamNoExcelTemplate() {
+      const wb = XLSX.utils.book_new();
+      const ws_data = [
+        ["STT", "Ten_Don_Vi", "Giam_No_Thuc_Hien_Tien", "Ty_Le_Thuc_Hien_Percent"],
+        [1, "Văn phòng tỉnh", 52683, 0.04],
+        [2, "Hồng Lĩnh", 61809, 0.12],
+        [3, "Hương Sơn", 7394, 0.02],
+        [4, "Đức Thọ", 11715, 0.03],
+        [5, "Can Lộc", 10241, 0.02],
+        [6, "Hương Khê", 4738, 0.01],
+        [7, "Thạch Hà", 11151, 0.03],
+        [8, "Cẩm Xuyên", 7521, 0.02],
+        [9, "Kỳ Anh", 22255, 0.02]
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Mau_Giam_No");
+      XLSX.writeFile(wb, "Mau_Nhap_So_Lieu_Giam_No.xlsx");
+    }
+
+    function handleGiamNoFileUpload(e) {
+      if (!checkAdminPassword()) { e.target.value = ''; return; }
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          let count = 0;
+          const curDate = document.getElementById('newDailyDate').value || document.getElementById('selectDate').value || '2026-09-20';
+          if (!DAILY_STORE[curDate]) DAILY_STORE[curDate] = {};
+
+          for (let i = 0; i < rows.length; i++) {
+            const r = rows[i];
+            if (r.length >= 4 && !isNaN(parseInt(r[0]))) {
+              const stt = parseInt(r[0]);
+              if (stt >= 1 && stt <= 9) {
+                if (!DAILY_STORE[curDate][stt]) DAILY_STORE[curDate][stt] = { bb:0, tn:0, bhyt:0, sothu:0, giamno:0, giamno_tyle:0 };
+                DAILY_STORE[curDate][stt].giamno = parseFloat(r[2]) || 0;
+                DAILY_STORE[curDate][stt].giamno_tyle = parseFloat(r[3]) || 0;
+                count++;
+              }
+            }
+          }
+          if (count > 0) {
+            saveStoredData();
+            alert(`Đã cập nhật thành công số liệu Giảm nợ cho ${count} đơn vị từ file Excel!`);
+            renderGiamNoTable();
+          } else {
+            alert('File Excel không đúng định dạng mẫu Giảm nợ!');
+          }
+        } catch (err) {
+          alert('Lỗi đọc file Excel Giảm nợ: ' + err.message);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function switchTaiTucSub(subType) {
+      currentTaiTucSubTab = subType;
+      const vTN = document.getElementById('sub-view-tt-tn');
+      const vBHYT = document.getElementById('sub-view-tt-bhyt');
+      const btnTN = document.getElementById('btn-sub-tt-tn');
+      const btnBHYT = document.getElementById('btn-sub-tt-bhyt');
+      if (subType === 'tn') {
+        if (vTN) vTN.classList.remove('hidden');
+        if (vBHYT) vBHYT.classList.add('hidden');
+        if (btnTN) btnTN.className = "px-3.5 py-1.5 rounded-md font-bold transition bg-emerald-700 text-white shadow";
+        if (btnBHYT) btnBHYT.className = "px-3.5 py-1.5 rounded-md font-bold transition text-slate-700 hover:text-slate-900";
+      } else {
+        if (vBHYT) vBHYT.classList.remove('hidden');
+        if (vTN) vTN.classList.add('hidden');
+        if (btnBHYT) btnBHYT.className = "px-3.5 py-1.5 rounded-md font-bold transition bg-indigo-700 text-white shadow";
+        if (btnTN) btnTN.className = "px-3.5 py-1.5 rounded-md font-bold transition text-slate-700 hover:text-slate-900";
+      }
+    }
+
+    function renderTaiTucTable() {
+      renderSingleTaiTucSubTable(TAI_TUC_TN, 'tbody-tai_tuc-tn', 'tfoot-tai_tuc-tn');
+      renderSingleTaiTucSubTable(TAI_TUC_BHYT, 'tbody-tai_tuc-bhyt', 'tfoot-tai_tuc-bhyt');
+    }
+
+    function renderSingleTaiTucSubTable(sourceData, tbodyId, tfootId) {
+      const tbody = document.getElementById(tbodyId);
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      let tot = { need_due:0, need_over:0, w1_due:0, w1_over:0, w2_due:0, w2_over:0, w3_due:0, w3_over:0, w4_due:0, w4_over:0, done_due:0, done_over:0, rem_due:0, rem_over:0 };
+
+      let items = BASE_TARGETS.map(u => {
+        const d = sourceData[u.stt] || { need_due:0, need_over:0, w1_due:0, w1_over:0, w2_due:0, w2_over:0, w3_due:0, w3_over:0, w4_due:0, w4_over:0 };
+        const done_due = (d.w1_due || 0) + (d.w2_due || 0) + (d.w3_due || 0) + (d.w4_due || 0);
+        const done_over = (d.w1_over || 0) + (d.w2_over || 0) + (d.w3_over || 0) + (d.w4_over || 0);
+        const rate_due = d.need_due > 0 ? parseFloat(((done_due / d.need_due) * 100).toFixed(1)) : 0;
+        const rate_over = d.need_over > 0 ? parseFloat(((done_over / d.need_over) * 100).toFixed(1)) : 0;
+        const rem_due = (d.need_due || 0) - done_due;
+        const rem_over = (d.need_over || 0) - done_over;
+        return { u, d, done_due, done_over, rate_due, rate_over, rem_due, rem_over };
+      });
+      items.sort((a, b) => b.rate_due - a.rate_due);
+
+      items.forEach((item, idx) => {
+        const { u, d, done_due, done_over, rate_due, rate_over, rem_due, rem_over } = item;
+        tot.need_due += (d.need_due || 0); tot.need_over += (d.need_over || 0);
+        tot.w1_due += (d.w1_due || 0); tot.w1_over += (d.w1_over || 0);
+        tot.w2_due += (d.w2_due || 0); tot.w2_over += (d.w2_over || 0);
+        tot.w3_due += (d.w3_due || 0); tot.w3_over += (d.w3_over || 0);
+        tot.w4_due += (d.w4_due || 0); tot.w4_over += (d.w4_over || 0);
+        tot.done_due += done_due; tot.done_over += done_over;
+        tot.rem_due += rem_due; tot.rem_over += rem_over;
+
+        const c_due = rate_due >= 90 ? 'val-good' : (rate_due >= 80 ? 'val-warning' : 'val-danger');
+        const c_over = rate_over >= 60 ? 'val-good' : (rate_over >= 40 ? 'val-warning' : 'val-danger');
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition";
+        tr.innerHTML = `
+          <td class="p-1.5 text-center font-bold text-slate-500">${idx + 1}</td>
+          <td class="p-1.5 font-bold text-slate-900">${u.name}</td>
+          <td class="p-1.5 text-right font-semibold text-slate-700 bg-slate-50">${formatVnNumber(d.need_due || 0, 0)}</td>
+          <td class="p-1.5 text-right font-semibold text-slate-700 bg-slate-50">${formatVnNumber(d.need_over || 0, 0)}</td>
+          <td class="p-1 text-right">${formatVnNumber(d.w1_due || 0, 0)}</td>
+          <td class="p-1 text-right">${formatVnNumber(d.w1_over || 0, 0)}</td>
+          <td class="p-1 text-right">${formatVnNumber(d.w2_due || 0, 0)}</td>
+          <td class="p-1 text-right">${formatVnNumber(d.w2_over || 0, 0)}</td>
+          <td class="p-1 text-right">${formatVnNumber(d.w3_due || 0, 0)}</td>
+          <td class="p-1 text-right">${formatVnNumber(d.w3_over || 0, 0)}</td>
+          <td class="p-1 text-right">${formatVnNumber(d.w4_due || 0, 0)}</td>
+          <td class="p-1 text-right">${formatVnNumber(d.w4_over || 0, 0)}</td>
+          <td class="p-1.5 text-right font-bold text-slate-900 bg-blue-50/40">${formatVnNumber(done_due, 0)}</td>
+          <td class="p-1.5 text-right ${c_due} bg-blue-50/40">${formatVnNumber(rate_due, 1)}%</td>
+          <td class="p-1.5 text-right font-bold text-slate-900 bg-rose-50/40">${formatVnNumber(done_over, 0)}</td>
+          <td class="p-1.5 text-right ${c_over} bg-rose-50/40">${formatVnNumber(rate_over, 1)}%</td>
+          <td class="p-1.5 text-right font-bold ${rem_due <= 0 ? 'val-good' : 'val-danger'} bg-amber-50/40">${formatVnNumber(rem_due, 0)}</td>
+          <td class="p-1.5 text-right font-bold ${rem_over <= 0 ? 'val-good' : 'val-danger'} bg-amber-50/40">${formatVnNumber(rem_over, 0)}</td>
+          <td class="p-1.5 text-center">
+            <button onclick="editTaiTuc(${u.stt})" class="text-blue-600 hover:text-blue-800 font-bold px-1" title="Sửa trực tiếp"><i class="fa-solid fa-pen"></i> Sửa</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const tot_rate_due = tot.need_due > 0 ? (tot.done_due / tot.need_due) * 100 : 0;
+      const tot_rate_over = tot.need_over > 0 ? (tot.done_over / tot.need_over) * 100 : 0;
+
+      const tfoot = document.getElementById(tfootId);
+      if (tfoot) {
+        tfoot.innerHTML = `
+          <tr class="total-row text-slate-900">
+            <td class="p-1.5 text-center" colspan="2">CỘNG</td>
+            <td class="p-1.5 text-right">${formatVnNumber(tot.need_due, 0)}</td>
+            <td class="p-1.5 text-right">${formatVnNumber(tot.need_over, 0)}</td>
+            <td class="p-1 text-right">${formatVnNumber(tot.w1_due, 0)}</td>
+            <td class="p-1 text-right">${formatVnNumber(tot.w1_over, 0)}</td>
+            <td class="p-1 text-right">${formatVnNumber(tot.w2_due, 0)}</td>
+            <td class="p-1 text-right">${formatVnNumber(tot.w2_over, 0)}</td>
+            <td class="p-1 text-right">${formatVnNumber(tot.w3_due, 0)}</td>
+            <td class="p-1 text-right">${formatVnNumber(tot.w3_over, 0)}</td>
+            <td class="p-1 text-right">${formatVnNumber(tot.w4_due, 0)}</td>
+            <td class="p-1 text-right">${formatVnNumber(tot.w4_over, 0)}</td>
+            <td class="p-1.5 text-right text-slate-950">${formatVnNumber(tot.done_due, 0)}</td>
+            <td class="p-1.5 text-right val-good">${formatVnNumber(tot_rate_due, 1)}%</td>
+            <td class="p-1.5 text-right text-slate-950">${formatVnNumber(tot.done_over, 0)}</td>
+            <td class="p-1.5 text-right val-warning">${formatVnNumber(tot_rate_over, 1)}%</td>
+            <td class="p-1.5 text-right val-warning">${formatVnNumber(tot.rem_due, 0)}</td>
+            <td class="p-1.5 text-right val-danger">${formatVnNumber(tot.rem_over, 0)}</td>
+            <td class="p-1.5 text-center">-</td>
+          </tr>
+        `;
+      }
+    }
+
+    function openTaiTucInputModal() {
+      if (!checkAdminPassword()) return;
+      const sel = document.getElementById('tt_select_unit');
+      if (sel) {
+        sel.innerHTML = '';
+        BASE_TARGETS.forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = u.stt; opt.innerText = `${u.stt}. ${u.name}`;
+          sel.appendChild(opt);
+        });
+      }
+      loadUnitTaiTucForm();
+      document.getElementById('modal-taituc').classList.remove('hidden');
+    }
+
+    function closeTaiTucInputModal() { document.getElementById('modal-taituc').classList.add('hidden'); }
+
+    function loadUnitTaiTucForm() {
+      const type = document.getElementById('tt_select_type').value;
+      const unitSel = document.getElementById('tt_select_unit');
+      if (!unitSel) return;
+      const stt = parseInt(unitSel.value) || 1;
+      const source = (type === 'bhxh_tn') ? TAI_TUC_TN : TAI_TUC_BHYT;
+      const d = source[stt] || { need_due:0, need_over:0, w1_due:0, w1_over:0, w2_due:0, w2_over:0, w3_due:0, w3_over:0, w4_due:0, w4_over:0 };
+
+      document.getElementById('tt_inp_due').value = d.need_due;
+      document.getElementById('tt_inp_overdue').value = d.need_over;
+      document.getElementById('tt_w1_due').value = d.w1_due;
+      document.getElementById('tt_w1_over').value = d.w1_over;
+      document.getElementById('tt_w2_due').value = d.w2_due;
+      document.getElementById('tt_w2_over').value = d.w2_over;
+      document.getElementById('tt_w3_due').value = d.w3_due;
+      document.getElementById('tt_w3_over').value = d.w3_over;
+      document.getElementById('tt_w4_due').value = d.w4_due;
+      document.getElementById('tt_w4_over').value = d.w4_over;
+    }
+
+    function saveUnitTaiTucData() {
+      const type = document.getElementById('tt_select_type').value;
+      const unitSel = document.getElementById('tt_select_unit');
+      if (!unitSel) return;
+      const stt = parseInt(unitSel.value);
+      const targetObj = (type === 'bhxh_tn') ? TAI_TUC_TN : TAI_TUC_BHYT;
+
+      targetObj[stt] = {
+        need_due: parseInt(document.getElementById('tt_inp_due').value) || 0,
+        need_over: parseInt(document.getElementById('tt_inp_overdue').value) || 0,
+        w1_due: parseInt(document.getElementById('tt_w1_due').value) || 0,
+        w1_over: parseInt(document.getElementById('tt_w1_over').value) || 0,
+        w2_due: parseInt(document.getElementById('tt_w2_due').value) || 0,
+        w2_over: parseInt(document.getElementById('tt_w2_over').value) || 0,
+        w3_due: parseInt(document.getElementById('tt_w3_due').value) || 0,
+        w3_over: parseInt(document.getElementById('tt_w3_over').value) || 0,
+        w4_due: parseInt(document.getElementById('tt_w4_due').value) || 0,
+        w4_over: parseInt(document.getElementById('tt_w4_over').value) || 0
+      };
+      saveStoredData();
+      alert('Đã lưu thành công số liệu tái tục theo tuần!');
+      closeTaiTucInputModal();
+      renderTaiTucTable();
+    }
+
+    function editTaiTuc(stt) {
+      if (!checkAdminPassword()) return;
+      const sel = document.getElementById('tt_select_unit');
+      if (sel) {
+        sel.innerHTML = '';
+        BASE_TARGETS.forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = u.stt; opt.innerText = `${u.stt}. ${u.name}`;
+          if (u.stt === stt) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      }
+      loadUnitTaiTucForm();
+      document.getElementById('modal-taituc').classList.remove('hidden');
+    }
+
+    function downloadTaiTucExcelTemplate() {
+      const wb = XLSX.utils.book_new();
+      const ws_data = [
+        ["STT", "Ten_Don_Vi", "Can_Vandong_DenHan", "Can_Vandong_QuaHan", "Tuan1_DenHan", "Tuan1_QuaHan", "Tuan2_DenHan", "Tuan2_QuaHan", "Tuan3_DenHan", "Tuan3_QuaHan", "Tuan4_DenHan", "Tuan4_QuaHan"],
+        [1, "Văn phòng tỉnh", 320, 85, 80, 15, 85, 20, 90, 25, 0, 0],
+        [2, "Hồng Lĩnh", 240, 60, 60, 12, 65, 15, 70, 18, 0, 0],
+        [3, "Hương Sơn", 190, 45, 50, 10, 55, 12, 60, 10, 0, 0],
+        [4, "Đức Thọ", 230, 70, 55, 15, 60, 18, 65, 20, 0, 0],
+        [5, "Can Lộc", 280, 75, 70, 16, 75, 20, 80, 22, 0, 0],
+        [6, "Hương Khê", 175, 50, 42, 11, 45, 12, 50, 15, 0, 0],
+        [7, "Thạch Hà", 270, 65, 68, 15, 72, 18, 78, 16, 0, 0],
+        [8, "Cẩm Xuyên", 250, 60, 62, 14, 68, 15, 74, 16, 0, 0],
+        [9, "Kỳ Anh", 360, 95, 88, 20, 95, 25, 102, 28, 0, 0]
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Mau_TaiTuc");
+      XLSX.writeFile(wb, "Mau_Bao_Cao_Thu_Tai_Tuc.xlsx");
+    }
+
+    function handleTaiTucFileUpload(e) {
+      if (!checkAdminPassword()) { e.target.value = ''; return; }
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          let count = 0;
+
+          const targetObj = (currentTaiTucSubTab === 'tn') ? TAI_TUC_TN : TAI_TUC_BHYT;
+          const labelLoaiHinh = (currentTaiTucSubTab === 'tn') ? "BHXH Tự nguyện" : "Bảo hiểm y tế (BHYT)";
+
+          for (let i = 0; i < rows.length; i++) {
+            const r = rows[i];
+            if (r && r.length > 0 && !isNaN(parseInt(r[0]))) {
+              const stt = parseInt(r[0]);
+              if (stt >= 1 && stt <= 9) {
+                targetObj[stt] = {
+                  need_due: parseInt(r[2]) || 0,
+                  need_over: parseInt(r[3]) || 0,
+                  w1_due: parseInt(r[4]) || 0,
+                  w1_over: parseInt(r[5]) || 0,
+                  w2_due: parseInt(r[6]) || 0,
+                  w2_over: parseInt(r[7]) || 0,
+                  w3_due: parseInt(r[8]) || 0,
+                  w3_over: parseInt(r[9]) || 0,
+                  w4_due: parseInt(r[10]) || 0,
+                  w4_over: parseInt(r[11]) || 0
+                };
+                count++;
+              }
+            }
+          }
+          if (count > 0) {
+            saveStoredData();
+            alert(`Đã cập nhật thành công số liệu Tái tục [${labelLoaiHinh}] theo tuần cho ${count} đơn vị từ file Excel!`);
+            renderTaiTucTable();
+          } else {
+            alert('File Excel không đúng định dạng mẫu! Vui lòng kiểm tra lại cột STT từ 1 đến 9.');
+          }
+        } catch (err) {
+          alert('Lỗi đọc file Excel Tái tục: ' + err.message);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function handleExcelFileUpload(e) {
+      if (!checkAdminPassword()) { e.target.value = ''; return; }
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          let count = 0;
+          const d = document.getElementById('newDailyDate').value || '2026-09-20';
+          if (!DAILY_STORE[d]) DAILY_STORE[d] = {};
+
+          for (let i = 0; i < rows.length; i++) {
+            const r = rows[i];
+            if (r.length >= 7 && !isNaN(parseInt(r[0]))) {
+              const stt = parseInt(r[0]);
+              if (stt >= 1 && stt <= 9) {
+                DAILY_STORE[d][stt] = {
+                  bb: parseInt(r[2]) || 0,
+                  tn: parseInt(r[3]) || 0,
+                  bhyt: parseInt(r[4]) || 0,
+                  sothu: parseFloat(r[5]) || 0,
+                  giamno: parseFloat(r[6]) || 0,
+                  giamno_tyle: parseFloat(r[7]) || 0
+                };
+                count++;
+              }
+            }
+          }
+          if (count > 0) {
+            saveStoredData();
+            const sel = document.getElementById('selectDate');
+            if (sel) {
+              sel.value = d;
+            }
+            alert(`Đã nạp thành công số liệu gốc & tiến độ ngày ${d} từ file Excel!`);
+            switchTab('dashboard');
+            refreshAll();
+          } else {
+            alert('File Excel không đúng định dạng mẫu!');
+          }
+        } catch (err) {
+          alert('Lỗi đọc file Excel: ' + err.message);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function downloadExcelTemplate() {
+      const wb = XLSX.utils.book_new();
+      const ws_data = [
+        ["STT", "Ten_Don_Vi", "Thuc_Hien_BHXH_BB", "Thuc_Hien_BHXH_TN", "Thuc_Hien_BHYT", "So_Thu_Thuc_Hien", "Giam_No_Thuc_Hien", "Ty_Le_Thuc_Hien"],
+        [1, "Văn phòng tỉnh", 31145, 9768, 159074, 842873, 52683, 0.04],
+        [2, "Hồng Lĩnh", 13407, 10111, 116494, 341376, 61809, 0.12],
+        [3, "Hương Sơn", 5837, 8349, 99514, 231461, 7394, 0.02],
+        [4, "Đức Thọ", 7259, 8781, 111465, 263623, 11715, 0.03],
+        [5, "Can Lộc", 6799, 8550, 145035, 272433, 10241, 0.02],
+        [6, "Hương Khê", 4287, 6365, 87249, 184046, 4738, 0.01],
+        [7, "Thạch Hà", 6877, 10589, 130958, 266290, 11151, 0.03],
+        [8, "Cẩm Xuyên", 5348, 8453, 126953, 245333, 7521, 0.02],
+        [9, "Kỳ Anh", 30370, 8410, 165313, 748489, 22255, 0.02]
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Mau_Nhap_Lieu");
+      XLSX.writeFile(wb, "Mau_Nhap_So_Lieu_Ngay_BHXH.xlsx");
+    }
+
+    function exportCurrentTableToExcel() {
+      const curDate = document.getElementById('selectDate').value;
+      const sortedList = getSortedList();
+      const { isBaseDate } = getProcessedData();
+
+      const wb = XLSX.utils.book_new();
+      const ws_data = [
+        ["STT", "Đơn vị", "Chỉ tiêu Q3 BB", "Thực hiện BB", "% Đạt Q3 BB", "Còn Q3 BB", "Chỉ tiêu Q3 TN", "Thực hiện TN", "% Đạt Q3 TN", "Còn Q3 TN", "Chỉ tiêu Q3 BHYT", "Thực hiện BHYT", "% Đạt Q3 BHYT", "Còn Q3 BHYT", "Tăng/Giảm Hôm nay", "So tháng trước"]
+      ];
+
+      sortedList.forEach(item => {
+        ws_data.push([
+          item.stt, item.name, item.bb_q3, item.cur.bb, item.rate_bb_q3 + "%", item.rem_bb_q3,
+          item.tn_q3, item.cur.tn, item.rate_tn_q3 + "%", item.rem_tn_q3,
+          item.bhyt_q3, item.cur.bhyt, item.rate_bhyt_q3 + "%", item.rem_bhyt_q3,
+          isBaseDate ? 0 : item.delta_day_total,
+          item.delta_month_bb + item.delta_month_tn + item.delta_month_bhyt
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Bao_Cao_Tien_Do");
+      XLSX.writeFile(wb, `Bao_Cao_BHXH_${curDate}_${currentMoc.toUpperCase()}.xlsx`);
+    }
+
+    function renderConfigMonthTable() {
+      const tbody = document.getElementById('tbody-config-month');
+      if (tbody) {
+        tbody.innerHTML = '';
+        BASE_TARGETS.forEach(t => {
+          const p = PREV_MONTH_DATA[t.stt] || { bb:0, tn:0, bhyt:0 };
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="p-2 text-center font-bold text-slate-500">${t.stt}</td>
+            <td class="p-2 font-bold text-slate-900">${t.name}</td>
+            <td class="p-2 text-right"><input type="number" id="inp_month_bb_${t.stt}" value="${p.bb}" class="border border-slate-400 rounded p-1 w-28 text-right font-semibold text-xs"></td>
+            <td class="p-2 text-right"><input type="number" id="inp_month_tn_${t.stt}" value="${p.tn}" class="border border-slate-400 rounded p-1 w-28 text-right font-semibold text-xs"></td>
+            <td class="p-2 text-right"><input type="number" id="inp_month_bhyt_${t.stt}" value="${p.bhyt}" class="border border-slate-400 rounded p-1 w-28 text-right font-semibold text-xs"></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      const tbodyGiamNo = document.getElementById('tbody-config-giamno');
+      if (tbodyGiamNo) {
+        tbodyGiamNo.innerHTML = '';
+        BASE_TARGETS.forEach(t => {
+          const g = GIAMNO_PLAN[t.stt] || { tien: 0, tyle: 0 };
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="p-2 text-center font-bold text-slate-500">${t.stt}</td>
+            <td class="p-2 font-bold text-slate-900">${t.name}</td>
+            <td class="p-2 text-right"><input type="number" step="1" id="inp_giamno_tien_${t.stt}" value="${g.tien}" class="border border-slate-400 rounded p-1 w-32 text-right font-semibold text-xs"></td>
+            <td class="p-2 text-right"><input type="number" step="0.01" id="inp_giamno_tyle_${t.stt}" value="${g.tyle}" class="border border-slate-400 rounded p-1 w-28 text-right font-semibold text-xs"></td>
+          `;
+          tbodyGiamNo.appendChild(tr);
+        });
+      }
+    }
+
+    function saveMonthAndGiamNoBenchmark() {
+      BASE_TARGETS.forEach(t => {
+        PREV_MONTH_DATA[t.stt] = {
+          bb: parseInt(document.getElementById(`inp_month_bb_${t.stt}`).value) || 0,
+          tn: parseInt(document.getElementById(`inp_month_tn_${t.stt}`).value) || 0,
+          bhyt: parseInt(document.getElementById(`inp_month_bhyt_${t.stt}`).value) || 0
+        };
+
+        GIAMNO_PLAN[t.stt] = {
+          tien: parseFloat(document.getElementById(`inp_giamno_tien_${t.stt}`).value) || 0,
+          tyle: parseFloat(document.getElementById(`inp_giamno_tyle_${t.stt}`).value) || 0
+        };
+      });
+      saveStoredData();
+      alert('Đã lưu thành công cấu hình mốc tháng trước và chỉ tiêu giao giảm nợ!');
+      switchTab('dashboard');
+      refreshAll();
+    }
+
+    function onMonthYearVietChanged() {
+      const m = document.getElementById('selectMonthViet').value;
+      const y = document.getElementById('selectYearViet').value;
+      const mm = m.padStart(2, '0');
+      const targetPrefix = `${y}-${mm}`;
+      
+      const dates = Object.keys(DAILY_STORE).filter(d => d.startsWith(targetPrefix)).sort();
+      if (dates.length > 0) {
+        document.getElementById('selectDate').value = dates[dates.length - 1];
+        refreshAll();
+      } else {
+        refreshAll();
+      }
+    }
+
+    function openMonthlySummaryModal() {
+      const m = document.getElementById('selectMonthViet').value;
+      const y = document.getElementById('selectYearViet').value;
+      document.getElementById('summary-period-label').innerText = `Tháng ${m}/${y}`;
+      renderMonthlySummaryTable();
+      document.getElementById('modal-monthly-summary').classList.remove('hidden');
+    }
+
+    function closeMonthlySummaryModal() {
+      document.getElementById('modal-monthly-summary').classList.add('hidden');
+    }
+
+    function renderMonthlySummaryTable() {
+      const sortedList = getSortedList();
+      const tbody = document.getElementById('tbody-monthly-summary');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      let tot = { bb: 0, tn: 0, bhyt: 0, delta_month: 0, sum_avg: 0 };
+
+      sortedList.forEach((item, idx) => {
+        const deltaM = item.delta_month_bb + item.delta_month_tn + item.delta_month_bhyt;
+        tot.bb += item.cur.bb;
+        tot.tn += item.cur.tn;
+        tot.bhyt += item.cur.bhyt;
+        tot.delta_month += deltaM;
+        tot.sum_avg += item.avg_composite_rate;
+
+        const c_rate = item.avg_composite_rate >= 98 ? 'val-good' : (item.avg_composite_rate >= 93 ? 'val-warning' : 'val-danger');
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50";
+        tr.innerHTML = `
+          <td class="p-2 text-center font-bold text-slate-500">${idx + 1}</td>
+          <td class="p-2 font-bold text-slate-900">${item.name}</td>
+          <td class="p-2 text-right font-bold text-blue-900 bg-blue-50/40">${(item.cur.bb || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right font-bold text-emerald-900 bg-emerald-50/40">${(item.cur.tn || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right font-bold text-indigo-900 bg-indigo-50/40">${(item.cur.bhyt || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right font-black ${c_rate} bg-amber-50/50">${formatVnNumber(item.avg_composite_rate, 2)}%</td>
+          <td class="p-2 text-right font-bold ${deltaM >= 0 ? 'val-good' : 'val-danger'}">${(deltaM >= 0 ? '+' : '') + deltaM.toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-center"><span class="px-2 py-0.5 rounded font-black text-[10px] ${idx < 3 ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-slate-100 text-slate-700'}">#${idx + 1}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const avgAll = tot.sum_avg / sortedList.length;
+      document.getElementById('tfoot-monthly-summary').innerHTML = `
+        <tr class="total-row text-slate-900">
+          <td class="p-2 text-center" colspan="2">TỔNG CỘNG</td>
+          <td class="p-2 text-right text-blue-950">${tot.bb.toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right text-emerald-950">${tot.tn.toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right text-indigo-950">${tot.bhyt.toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right val-good">${formatVnNumber(avgAll, 2)}%</td>
+          <td class="p-2 text-right val-danger">${(tot.delta_month >= 0 ? '+' : '') + tot.delta_month.toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-center">-</td>
+        </tr>
+      `;
+    }
+
+    function exportMonthlyReportToExcel() {
+      const m = document.getElementById('selectMonthViet').value;
+      const y = document.getElementById('selectYearViet').value;
+      const sortedList = getSortedList();
+
+      const wb = XLSX.utils.book_new();
+      const ws_data = [
+        ["STT", "Đơn vị", "BHXH Bắt buộc", "BHXH Tự nguyện", "BHYT", "% Đạt Q3 (Trung bình 3 chỉ tiêu)", "So tháng trước", "Xếp hạng"]
+      ];
+
+      sortedList.forEach((item, idx) => {
+        const deltaM = item.delta_month_bb + item.delta_month_tn + item.delta_month_bhyt;
+        ws_data.push([
+          idx + 1, item.name, item.cur.bb, item.cur.tn, item.cur.bhyt,
+          item.avg_composite_rate + "%", deltaM, idx + 1
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, `TongHop_Thang_${m}_${y}`);
+      XLSX.writeFile(wb, `Bao_Cao_Tong_Hop_Thang_${m}_${y}.xlsx`);
+    }
+
+    // --- HSSV REPORT FUNCTIONS ---
+    function onHssvDotChanged() {
+      const sel = document.getElementById('selectHssvDot');
+      if (sel) {
+        currentHssvDot = sel.value;
+        renderHssvTable();
+      }
+    }
+
+    function renderHssvTable() {
+      const tbody = document.getElementById('tbody-hssv');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      let dotData = HSSV_DATA[currentHssvDot] || HSSV_DATA['dot1'];
+      let tot = { schools: 0, students: 0, other_cards: 0, need_vd: 0, joined: 0, not_joined: 0 };
+
+      BASE_TARGETS.forEach((u, idx) => {
+        const d = dotData[u.stt] || { schools: 0, students: 0, other_cards: 0, need_vd: 0, joined: 0 };
+        const not_joined = Math.max(0, d.need_vd - d.joined);
+        const rate = d.need_vd > 0 ? parseFloat(((d.joined / d.need_vd) * 100).toFixed(2)) : 0;
+
+        tot.schools += (d.schools || 0);
+        tot.students += (d.students || 0);
+        tot.other_cards += (d.other_cards || 0);
+        tot.need_vd += (d.need_vd || 0);
+        tot.joined += (d.joined || 0);
+        tot.not_joined += not_joined;
+
+        const c_rate = rate >= 95 ? 'val-good' : (rate >= 90 ? 'val-warning' : 'val-danger');
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition";
+        tr.innerHTML = `
+          <td class="p-2 text-center font-bold text-slate-500">${idx + 1}</td>
+          <td class="p-2 font-bold text-slate-900">${u.name}</td>
+          <td class="p-2 text-right font-semibold text-cyan-900 bg-cyan-50/40">${(d.schools || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right text-slate-700">${(d.students || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right text-slate-700">${(d.other_cards || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right font-bold text-purple-950 bg-purple-50/40">${(d.need_vd || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right font-bold text-emerald-900 bg-emerald-50/40">${(d.joined || 0).toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-right font-bold ${c_rate} bg-amber-50/50">${formatVnNumber(rate, 2)}%</td>
+          <td class="p-2 text-right font-bold text-rose-800 bg-rose-50/40">${not_joined.toLocaleString('vi-VN')}</td>
+          <td class="p-2 text-center">
+            <button onclick="editHssv(${u.stt})" class="text-blue-600 hover:text-blue-800 font-bold px-1" title="Sửa trực tiếp"><i class="fa-solid fa-pen"></i> Sửa</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const tot_rate = tot.need_vd > 0 ? (tot.joined / tot.need_vd) * 100 : 0;
+      const tfoot = document.getElementById('tfoot-hssv');
+      if (tfoot) {
+        tfoot.innerHTML = `
+          <tr class="total-row text-slate-900">
+            <td class="p-2 text-center" colspan="2">Tổng cộng (${currentHssvDot === 'dot1' ? 'Đợt 1' : 'Đợt 2'})</td>
+            <td class="p-2 text-right text-cyan-950">${tot.schools.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">${tot.students.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">${tot.other_cards.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right text-purple-950">${tot.need_vd.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right text-emerald-950">${tot.joined.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right val-good">${formatVnNumber(tot_rate, 2)}%</td>
+            <td class="p-2 text-right text-rose-900">${tot.not_joined.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-center">-</td>
+          </tr>
+        `;
+      }
+    }
+
+    function editHssv(stt) {
+      if (!checkAdminPassword()) return;
+      const u = BASE_TARGETS.find(x => x.stt === stt);
+      let dotData = HSSV_DATA[currentHssvDot] || HSSV_DATA['dot1'];
+      const d = dotData[stt] || { schools: 0, students: 0, other_cards: 0, need_vd: 0, joined: 0 };
+      
+      const sSch = prompt(`Nhập Số trường học của ${u.name} (${currentHssvDot === 'dot1' ? 'Đợt 1' : 'Đợt 2'}):`, d.schools);
+      if (sSch === null) return;
+      const sStu = prompt(`Nhập Số học sinh của ${u.name}:`, d.students);
+      if (sStu === null) return;
+      const sOth = prompt(`Nhập Số có thẻ khác của ${u.name}:`, d.other_cards);
+      if (sOth === null) return;
+      const sNeed = prompt(`Nhập Số HSSV cần vận động của ${u.name}:`, d.need_vd);
+      if (sNeed === null) return;
+      const sJoi = prompt(`Nhập Số đã tham gia của ${u.name}:`, d.joined);
+      if (sJoi === null) return;
+
+      dotData[stt] = {
+        schools: parseInt(sSch) || 0,
+        students: parseInt(sStu) || 0,
+        other_cards: parseInt(sOth) || 0,
+        need_vd: parseInt(sNeed) || 0,
+        joined: parseInt(sJoi) || 0
+      };
+      saveStoredData();
+      renderHssvTable();
+      alert("Đã cập nhật số liệu HSSV thành công!");
+    }
+
+    function downloadHssvExcelTemplate() {
+      const wb = XLSX.utils.book_new();
+      const ws_data = [
+        ["STT", "Ten_Don_Vi", "So_Truong_Hoc", "So_Hoc_Sinh", "So_Co_The_Khac", "So_Can_Vandong", "So_Da_Tham_Gia"],
+        [1, "Văn phòng tỉnh", 45, 30000, 1200, 28800, 26500],
+        [2, "Hồng Lĩnh", 22, 14200, 500, 13700, 13500],
+        [3, "Hương Sơn", 38, 18900, 800, 18100, 17800],
+        [4, "Đức Thọ", 30, 16500, 600, 15900, 15600],
+        [5, "Can Lộc", 42, 24000, 900, 23100, 22800],
+        [6, "Hương Khê", 35, 15200, 400, 14800, 14400],
+        [7, "Thạch Hà", 48, 27500, 1100, 26400, 25800],
+        [8, "Cẩm Xuyên", 40, 23100, 850, 22250, 21900],
+        [9, "Kỳ Anh", 55, 35000, 1500, 33500, 32500]
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Mau_Bao_Cao_HSSV");
+      XLSX.writeFile(wb, "Mau_Bao_Cao_BHYT_HSSV_2026_2027.xlsx");
+    }
+
+    function handleHssvFileUpload(e) {
+      if (!checkAdminPassword()) { e.target.value = ''; return; }
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          let count = 0;
+          let dotData = HSSV_DATA[currentHssvDot] || HSSV_DATA['dot1'];
+
+          for (let i = 0; i < rows.length; i++) {
+            const r = rows[i];
+            if (r.length >= 7 && !isNaN(parseInt(r[0]))) {
+              const stt = parseInt(r[0]);
+              if (stt >= 1 && stt <= 9) {
+                dotData[stt] = {
+                  schools: parseInt(r[2]) || 0,
+                  students: parseInt(r[3]) || 0,
+                  other_cards: parseInt(r[4]) || 0,
+                  need_vd: parseInt(r[5]) || 0,
+                  joined: parseInt(r[6]) || 0
+                };
+                count++;
+              }
+            }
+          }
+          if (count > 0) {
+            saveStoredData();
+            alert(`Đã cập nhật thành công số liệu BHYT HSSV (${currentHssvDot === 'dot1' ? 'Đợt 1' : 'Đợt 2'}) cho ${count} đơn vị từ file Excel!`);
+            renderHssvTable();
+          } else {
+            alert('File Excel không đúng định dạng mẫu!');
+          }
+        } catch (err) {
+          alert('Lỗi đọc file Excel HSSV: ' + err.message);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Khởi chạy khi mở trang
+    loadStoredData();
+    refreshAll();
+  </script>
+</body>
+</html>
