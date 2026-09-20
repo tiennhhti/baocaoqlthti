@@ -1386,7 +1386,7 @@
       }
     }
 
-    // --- GIẢM NỢ TAB (ĐÃ ĐIỀU CHỈNH DÒNG TỔNG THEO YÊU CẦU) ---
+    // --- GIẢM NỢ TAB (ĐÃ ĐẢO VỊ TRÍ CỘT TỶ LỆ THỰC HIỆN VÀ CÒN PHẢI THỰC HIỆN CHO CÁC DÒNG) ---
     function renderGiamNoTable() {
       const { list } = getProcessedData();
       const tbody = document.getElementById('tbody-giamno');
@@ -1415,9 +1415,9 @@
           <td class="p-2 text-right text-slate-700">${formatVnInteger(p.tien)}</td>
           <td class="p-2 text-right text-slate-700">${formatVnNumber(p.tyle, 2)}%</td>
           <td class="p-2 text-right font-bold text-emerald-950 bg-emerald-50/40">${formatVnInteger(actual)}</td>
-          <td class="p-2 text-right font-bold text-emerald-900">${formatVnNumber(actual_tyle, 2)}%</td>
+          <td class="p-2 text-right font-bold text-emerald-900">${formatVnNumber(conlai_tyle, 2)}%</td>
           <td class="p-2 text-right text-slate-700">${formatVnInteger(conlai_tien)}</td>
-          <td class="p-2 text-right font-semibold text-slate-800">${formatVnNumber(conlai_tyle, 2)}%</td>
+          <td class="p-2 text-right font-semibold text-slate-800">${formatVnNumber(actual_tyle, 2)}%</td>
           <td class="p-2 text-center">
             <button onclick="editGiamNo(${item.stt})" class="text-blue-600 hover:text-blue-800 font-bold px-1"><i class="fa-solid fa-pen"></i> Sửa</button>
           </td>
@@ -1425,7 +1425,6 @@
         tbody.appendChild(tr);
       });
 
-      // ĐIỀU CHỈNH: Tính tổng tỷ lệ giao và tỷ lệ thực hiện dựa trên dự toán thu được giao là 5.109.331
       const duToanThuGiao = 5109331;
       let tot_giao_tyle = tot.giao_tien > 0 ? (tot.giao_tien / duToanThuGiao) * 100 : 0;
       let tot_actual_tyle = tot.thuchien_tien > 0 ? (tot.thuchien_tien / duToanThuGiao) * 100 : 0;
