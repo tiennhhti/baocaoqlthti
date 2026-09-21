@@ -11,9 +11,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- SheetJS CDN cho File Excel .XLSX -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <!-- Firebase SDK Compat -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -135,7 +132,6 @@
               <th colspan="5" class="p-2 text-center bg-blue-100 text-blue-950 font-black" id="header-col-bb">BHXH Bắt Buộc (Mức 1)</th>
               <th colspan="5" class="p-2 text-center bg-emerald-100 text-emerald-950 font-black" id="header-col-tn">BHXH Tự Nguyện (Mức 1)</th>
               <th colspan="5" class="p-2 text-center bg-indigo-100 text-indigo-950 font-black" id="header-col-bhyt">Bảo Hiểm Y Tế (Mức 1)</th>
-              <th colspan="2" class="p-2 text-center bg-amber-100 text-amber-950 font-black">So Sánh Tiến Độ</th>
             </tr>
             <tr class="text-[10px]">
               <th class="p-2 text-right bg-blue-50/80">Chỉ tiêu Q3</th>
@@ -153,8 +149,6 @@
               <th class="p-2 text-right bg-indigo-50/80">% Đạt Q3</th>
               <th class="p-2 text-right bg-indigo-50/80">% Đạt Năm</th>
               <th class="p-2 text-right bg-indigo-50/80">Còn Q3</th>
-              <th class="p-2 text-right bg-amber-50/80">So ngày qua</th>
-              <th class="p-2 text-right bg-amber-50/80">So tháng trước</th>
             </tr>
           </thead>
           <tbody id="tbody-main" class="font-medium"></tbody>
@@ -346,7 +340,7 @@
                 <th class="p-1 text-right bg-blue-50">Số tiền</th>
                 <th class="p-1 text-right bg-blue-50">Tỷ lệ</th>
                 <th class="p-1 text-right bg-emerald-50">Số tiền</th>
-                <th class="p-1 text-right bg-emerald-50">Tỷ lệ</th>
+                <th class="p-1 text-right bg-emerald-50">Tỷ lệ (%)</th>
                 <th class="p-1 text-right bg-amber-50">Số tiền</th>
                 <th class="p-1 text-right bg-amber-50 w-[90px]">Tỷ lệ (%)</th>
               </tr>
@@ -647,29 +641,16 @@
   </footer>
 
   <script>
-    // --- KẾT NỐI FIREBASE CHÍNH XÁC CHO DỰ ÁN: baocaoqlthti ---
-    const firebaseConfig = {
-      apiKey: "AIzaSyBnUTiFjVnFoOK-0RHiEPtwqTKcPjKFxJs",
-      authDomain: "baocaoqlthti.firebaseapp.com",
-      databaseURL: "https://baocaoqlthti-default-rtdb.firebaseio.com",
-      projectId: "baocaoqlthti",
-      storageBucket: "baocaoqlthti.firebasestorage.app",
-      messagingSenderId: "172229921729",
-      appId: "1:172229921729:web:9f56be7299c6932d277d40",
-      measurementId: "G-8RTSNZLRPP"
-    };
-
-    // Khởi tạo Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    // --- ĐƯỜNG DẪN API GOOGLE APPS SCRIPT (GOOGLE DRIVE / SHEETS) ---
+    const GOOGLE_API_URL = "https://script.google.com/macros/s/AKfycbztU83FERvoLtosSifSSe3EfovAOnjZLwlJ-5Pa5QB61K9Q01u6U-gUqYjFwlh7bJaa/exec";
 
     const ADMIN_PASSWORD = "Binbo1977a@";
     let isSessionUnlocked = false;
-    let isFirebaseDataLoaded = false; // true sau khi đã nhận được ít nhất 1 lần dữ liệu thật từ máy chủ
+    let isDataLoaded = false;
 
     function checkAdminPassword() {
-      if (!isFirebaseDataLoaded) {
-        alert("Dữ liệu đang tải từ hệ thống đám mây, vui lòng đợi vài giây rồi thử lại (để tránh ghi đè mất dữ liệu đang có).");
+      if (!isDataLoaded) {
+        alert("Đang tải dữ liệu từ Google Drive, vui lòng đợi giây lát...");
         return false;
       }
       if (!isSessionUnlocked) {
@@ -695,41 +676,33 @@
       return parts.join(",");
     }
 
-    // --- TẢI DỮ LIỆU TỪ FIREBASE (REAL-TIME) ---
-    // Dùng .on('value', ...) thay vì .once('value', ...): mỗi khi có BẤT KỲ máy nào
-    // lưu dữ liệu mới lên Firebase, tất cả các máy khác đang mở sẵn trang sẽ TỰ ĐỘNG
-    // nhận được bản mới nhất và render lại, không cần bấm F5. Đây là nguyên nhân chính
-    // khiến trước đây máy nào mở trang từ trước (không reload) vẫn hiển thị số liệu cũ.
+    // --- TẢI DỮ LIỆU TỪ GOOGLE DRIVE ---
     function loadStoredData() {
-        db.ref('bhxh_data/').on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                if (data.daily_store) DAILY_STORE = data.daily_store;
-                if (data.hssv_data) HSSV_DATA = data.hssv_data;
-                if (data.taituc_tn) TAI_TUC_TN = data.taituc_tn;
-                if (data.taituc_bhyt) TAI_TUC_BHYT = data.taituc_bhyt;
-                if (data.prev_month) PREV_MONTH_DATA = data.prev_month;
-                if (data.sothu_data) SOTHU_DATA = data.sothu_data;
-                if (data.giamno_plan) GIAMNO_PLAN = data.giamno_plan;
-                if (data.giamno_data) GIAMNO_DATA = data.giamno_data;
-            }
-            isFirebaseDataLoaded = true;
-            refreshAll();
-        }, (error) => {
-            console.error("Lỗi đọc Firebase:", error);
-            alert("KHÔNG kết nối được với hệ thống đám mây để tải dữ liệu (có thể do quyền truy cập Firebase hoặc mạng). Số liệu hiển thị có thể KHÔNG phải bản mới nhất.\n\nChi tiết lỗi: " + error.message);
-            refreshAll();
-        });
+        fetch(GOOGLE_API_URL)
+          .then(response => response.json())
+          .then(data => {
+              if (data && Object.keys(data).length > 0) {
+                  if (data.daily_store) DAILY_STORE = data.daily_store;
+                  if (data.hssv_data) HSSV_DATA = data.hssv_data;
+                  if (data.taituc_tn) TAI_TUC_TN = data.taituc_tn;
+                  if (data.taituc_bhyt) TAI_TUC_BHYT = data.taituc_bhyt;
+                  if (data.prev_month) PREV_MONTH_DATA = data.prev_month;
+                  if (data.sothu_data) SOTHU_DATA = data.sothu_data;
+                  if (data.giamno_plan) GIAMNO_PLAN = data.giamno_plan;
+                  if (data.giamno_data) GIAMNO_DATA = data.giamno_data;
+              }
+              isDataLoaded = true;
+              refreshAll();
+          })
+          .catch((error) => {
+              console.error("Lỗi đọc Google Drive API:", error);
+              isDataLoaded = true; 
+              refreshAll();
+          });
     }
 
-    // --- LƯU DỮ LIỆU LÊN FIREBASE ---
-    // onSuccess: hàm callback CHỈ chạy sau khi Firebase xác nhận đã lưu xong (tránh báo
-    // "thành công" giả trong khi dữ liệu thực ra chưa được ghi lên máy chủ).
+    // --- LƯU DỮ LIỆU LÊN GOOGLE DRIVE ---
     function saveStoredData(onSuccess) {
-        if (!isFirebaseDataLoaded) {
-            alert("Chưa tải xong dữ liệu gốc từ máy chủ nên KHÔNG thể lưu lúc này (để tránh ghi đè mất dữ liệu). Vui lòng tải lại trang và thử lại.");
-            return;
-        }
         const payload = {
             daily_store: DAILY_STORE,
             hssv_data: HSSV_DATA,
@@ -741,14 +714,24 @@
             giamno_data: typeof GIAMNO_DATA !== 'undefined' ? GIAMNO_DATA : {}
         };
 
-        db.ref('bhxh_data/').set(payload)
-          .then(() => {
-              console.log("Đã lưu dữ liệu lên Firebase thành công!");
-              if (typeof onSuccess === 'function') onSuccess();
-          })
-          .catch((error) => {
-              alert("❌ LƯU THẤT BẠI — dữ liệu vừa nhập CHƯA được lưu lên hệ thống đám mây, sẽ mất khi tải lại trang!\n\nLý do: " + error.message + "\n\nVui lòng kiểm tra kết nối mạng / quyền truy cập Firebase rồi thử lưu lại.");
-          });
+        fetch(GOOGLE_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.status === "success" || res.success) {
+                console.log("Đã lưu dữ liệu lên Google Drive thành công!");
+                if (typeof onSuccess === 'function') onSuccess();
+            } else {
+                alert("Lỗi từ Google Apps Script: " + (res.message || "Không thể lưu dữ liệu"));
+            }
+        })
+        .catch((error) => {
+            console.error("Lỗi kết nối khi lưu dữ liệu lên Google Drive:", error);
+            alert("Lỗi kết nối khi lưu dữ liệu lên Google Drive: " + error.message);
+        });
     }
 
     const BASE_TARGETS = [
@@ -1055,12 +1038,21 @@
       const curDate = (document.getElementById('selectDate') && document.getElementById('selectDate').value) || defaultDate;
       
       const pMonth = PREV_MONTH_DATA;
-      const isBaseDate = (curDate === dates[0]);
+      const curIndex = dates.indexOf(curDate);
+      const prevDate = curIndex > 0 ? dates[curIndex - 1] : null;
+      const isBaseDate = (curIndex <= 0);
 
       let list = BASE_TARGETS.map(t => {
         const cur = (DAILY_STORE[curDate] && DAILY_STORE[curDate][t.stt]) || { bb:0, tn:0, bhyt:0, sothu:0, giamno:0, giamno_tyle:0 };
+        const prev = (prevDate && DAILY_STORE[prevDate] && DAILY_STORE[prevDate][t.stt]) ? DAILY_STORE[prevDate][t.stt] : null;
         const pm = pMonth[t.stt] || { bb:0, tn:0, bhyt:0 };
 
+        // Chênh lệch so với ngày trước đó
+        const delta_day_bb = prev ? (cur.bb - prev.bb) : 0;
+        const delta_day_tn = prev ? (cur.tn - prev.tn) : 0;
+        const delta_day_bhyt = prev ? (cur.bhyt - prev.bhyt) : 0;
+
+        // Chênh lệch so với tháng trước
         const delta_month_bb = cur.bb - pm.bb;
         const delta_month_tn = cur.tn - pm.tn;
         const delta_month_bhyt = cur.bhyt - pm.bhyt;
@@ -1088,12 +1080,12 @@
 
         return {
           stt: t.stt, name: t.name, cur,
-          bb_q3, bb_nam, rate_bb_q3, rate_bb_nam, rem_bb_q3, rem_bb_nam, delta_month_bb,
-          tn_q3, tn_nam, rate_tn_q3, rate_tn_nam, rem_tn_q3, rem_tn_nam, delta_month_tn,
-          bhyt_q3, bhyt_nam, rate_bhyt_q3, rate_bhyt_nam, rem_bhyt_q3, rem_bhyt_nam, delta_month_bhyt
+          bb_q3, bb_nam, rate_bb_q3, rate_bb_nam, rem_bb_q3, rem_bb_nam, delta_day_bb, delta_month_bb,
+          tn_q3, tn_nam, rate_tn_q3, rate_tn_nam, rem_tn_q3, rem_tn_nam, delta_day_tn, delta_month_tn,
+          bhyt_q3, bhyt_nam, rate_bhyt_q3, rate_bhyt_nam, rem_bhyt_q3, rem_bhyt_nam, delta_day_bhyt, delta_month_bhyt
         };
       });
-      return { list, isBaseDate, curDate };
+      return { list, isBaseDate, curDate, prevDate };
     }
 
     function refreshAll() {
@@ -1146,23 +1138,31 @@
 
     function renderMainTable() {
       const sortedList = getSortedList();
-      const { isBaseDate } = getProcessedData();
       const tbody = document.getElementById('tbody-main');
       if (!tbody) return;
       tbody.innerHTML = '';
 
-      let tot = { bb_q3:0, bb_th:0, rem_bb_q3:0, tn_q3:0, tn_th:0, rem_tn_q3:0, bhyt_q3:0, bhyt_th:0, rem_bhyt_q3:0, delta_day:0, delta_month:0 };
-      let sum_rate_bb_q3 = 0, sum_rate_tn_q3 = 0, sum_rate_bhyt_q3 = 0;
-      let sum_rate_bb_nam = 0, sum_rate_tn_nam = 0, sum_rate_bhyt_nam = 0;
+      let tot = { 
+        bb_q3: 0, bb_nam: 0, bb_th: 0, rem_bb_q3: 0, 
+        tn_q3: 0, tn_nam: 0, tn_th: 0, rem_tn_q3: 0, 
+        bhyt_q3: 0, bhyt_nam: 0, bhyt_th: 0, rem_bhyt_q3: 0 
+      };
 
       sortedList.forEach((item, index) => {
-        tot.bb_q3 += (item.bb_q3 || 0); tot.bb_th += (item.cur.bb || 0); tot.rem_bb_q3 += (item.rem_bb_q3 || 0);
-        tot.tn_q3 += (item.tn_q3 || 0); tot.tn_th += (item.cur.tn || 0); tot.rem_tn_q3 += (item.rem_tn_q3 || 0);
-        tot.bhyt_q3 += (item.bhyt_q3 || 0); tot.bhyt_th += (item.cur.bhyt || 0); tot.rem_bhyt_q3 += (item.rem_bhyt_q3 || 0);
-        tot.delta_month += ((item.delta_month_bb || 0) + (item.delta_month_tn || 0) + (item.delta_month_bhyt || 0));
+        tot.bb_q3 += (item.bb_q3 || 0); 
+        tot.bb_nam += (item.bb_nam || 0); 
+        tot.bb_th += (item.cur.bb || 0); 
+        tot.rem_bb_q3 += (item.rem_bb_q3 || 0);
 
-        sum_rate_bb_q3 += item.rate_bb_q3; sum_rate_tn_q3 += item.rate_tn_q3; sum_rate_bhyt_q3 += item.rate_bhyt_q3;
-        sum_rate_bb_nam += item.rate_bb_nam; sum_rate_tn_nam += item.rate_tn_nam; sum_rate_bhyt_nam += item.rate_bhyt_nam;
+        tot.tn_q3 += (item.tn_q3 || 0); 
+        tot.tn_nam += (item.tn_nam || 0); 
+        tot.tn_th += (item.cur.tn || 0); 
+        tot.rem_tn_q3 += (item.rem_tn_q3 || 0);
+
+        tot.bhyt_q3 += (item.bhyt_q3 || 0); 
+        tot.bhyt_nam += (item.bhyt_nam || 0); 
+        tot.bhyt_th += (item.cur.bhyt || 0); 
+        tot.rem_bhyt_q3 += (item.rem_bhyt_q3 || 0);
 
         const c_bb = item.rate_bb_q3 >= 100 ? 'val-good' : (item.rate_bb_q3 >= 95 ? 'val-warning' : 'val-danger');
         const c_tn = item.rate_tn_q3 >= 95 ? 'val-good' : (item.rate_tn_q3 >= 90 ? 'val-warning' : 'val-danger');
@@ -1188,18 +1188,17 @@
           <td class="p-2 text-right ${c_bhyt}">${formatVnNumber(item.rate_bhyt_q3, 2)}%</td>
           <td class="p-2 text-right text-slate-700">${formatVnNumber(item.rate_bhyt_nam, 2)}%</td>
           <td class="p-2 text-right ${item.rem_bhyt_q3 <= 0 ? 'val-good' : 'text-slate-700'}">${(item.rem_bhyt_q3 || 0).toLocaleString('vi-VN')}</td>
-          <td class="p-2 text-right font-bold text-slate-400">0</td>
-          <td class="p-2 text-right font-bold ${((item.delta_month_bb || 0) + (item.delta_month_tn || 0) + (item.delta_month_bhyt || 0)) >= 0 ? 'val-good' : 'val-danger'}">${(((item.delta_month_bb || 0) + (item.delta_month_tn || 0) + (item.delta_month_bhyt || 0)) >= 0 ? '+' : '') + ((item.delta_month_bb || 0) + (item.delta_month_tn || 0) + (item.delta_month_bhyt || 0)).toLocaleString('vi-VN')}</td>
         `;
         tbody.appendChild(tr);
       });
 
-      const avg_rate_bb_q3 = (sum_rate_bb_q3 / sortedList.length).toFixed(2);
-      const avg_rate_bb_nam = (sum_rate_bb_nam / sortedList.length).toFixed(2);
-      const avg_rate_tn_q3 = (sum_rate_tn_q3 / sortedList.length).toFixed(2);
-      const avg_rate_tn_nam = (sum_rate_tn_nam / sortedList.length).toFixed(2);
-      const avg_rate_bhyt_q3 = (sum_rate_bhyt_q3 / sortedList.length).toFixed(2);
-      const avg_rate_bhyt_nam = (sum_rate_bhyt_nam / sortedList.length).toFixed(2);
+      // Tỷ lệ tổng cộng chuẩn: Tổng thực hiện / Tổng chỉ tiêu
+      const tot_rate_bb_q3 = tot.bb_q3 > 0 ? (tot.bb_th / tot.bb_q3) * 100 : 0;
+      const tot_rate_bb_nam = tot.bb_nam > 0 ? (tot.bb_th / tot.bb_nam) * 100 : 0;
+      const tot_rate_tn_q3 = tot.tn_q3 > 0 ? (tot.tn_th / tot.tn_q3) * 100 : 0;
+      const tot_rate_tn_nam = tot.tn_nam > 0 ? (tot.tn_th / tot.tn_nam) * 100 : 0;
+      const tot_rate_bhyt_q3 = tot.bhyt_q3 > 0 ? (tot.bhyt_th / tot.bhyt_q3) * 100 : 0;
+      const tot_rate_bhyt_nam = tot.bhyt_nam > 0 ? (tot.bhyt_th / tot.bhyt_nam) * 100 : 0;
 
       const tfoot = document.getElementById('tfoot-main');
       if (tfoot) {
@@ -1208,36 +1207,45 @@
             <td class="p-2 text-center" colspan="2">TỔNG CỘNG</td>
             <td class="p-2 text-right">${tot.bb_q3.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right text-blue-950">${tot.bb_th.toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right val-good">${formatVnNumber(avg_rate_bb_q3, 2)}%</td>
-            <td class="p-2 text-right text-slate-900">${formatVnNumber(avg_rate_bb_nam, 2)}%</td>
+            <td class="p-2 text-right val-good">${formatVnNumber(tot_rate_bb_q3, 2)}%</td>
+            <td class="p-2 text-right text-slate-900">${formatVnNumber(tot_rate_bb_nam, 2)}%</td>
             <td class="p-2 text-right val-good">${tot.rem_bb_q3.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right">${tot.tn_q3.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right text-emerald-950">${tot.tn_th.toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right val-warning">${formatVnNumber(avg_rate_tn_q3, 2)}%</td>
-            <td class="p-2 text-right text-slate-900">${formatVnNumber(avg_rate_tn_nam, 2)}%</td>
+            <td class="p-2 text-right val-warning">${formatVnNumber(tot_rate_tn_q3, 2)}%</td>
+            <td class="p-2 text-right text-slate-900">${formatVnNumber(tot_rate_tn_nam, 2)}%</td>
             <td class="p-2 text-right text-slate-800">${tot.rem_tn_q3.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right">${tot.bhyt_q3.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right text-indigo-950">${tot.bhyt_th.toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right val-good">${formatVnNumber(avg_rate_bhyt_q3, 2)}%</td>
-            <td class="p-2 text-right text-slate-900">${formatVnNumber(avg_rate_bhyt_nam, 2)}%</td>
+            <td class="p-2 text-right val-good">${formatVnNumber(tot_rate_bhyt_q3, 2)}%</td>
+            <td class="p-2 text-right text-slate-900">${formatVnNumber(tot_rate_bhyt_nam, 2)}%</td>
             <td class="p-2 text-right text-slate-800">${tot.rem_bhyt_q3.toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right">0</td>
-            <td class="p-2 text-right val-danger">${(tot.delta_month>=0?'+':'') + tot.delta_month.toLocaleString('vi-VN')}</td>
           </tr>
         `;
       }
     }
 
     function renderSpecialTables() {
-      const { list } = getProcessedData();
+      const { list, isBaseDate } = getProcessedData();
+
+      // Hàm format hiển thị tăng/giảm ngày
+      const formatDeltaDay = (val) => {
+        if (isBaseDate) return `<span class="text-slate-400 font-bold">-</span>`;
+        const cls = val > 0 ? 'val-good' : (val < 0 ? 'val-danger' : 'text-slate-500');
+        const sign = val > 0 ? '+' : '';
+        return `<span class="${cls} font-bold">${sign}${val.toLocaleString('vi-VN')}</span>`;
+      };
+
+      // 1. BHXH BẮT BUỘC
       const tbodyBB = document.getElementById('tbody-bhxh_bb');
       if (tbodyBB) {
         tbodyBB.innerHTML = '';
         let sortedBB = [...list].sort((a, b) => b.rate_bb_q3 - a.rate_bb_q3);
-        let totBB = { th:0, nam:0, q3:0, rem_q3:0, rem_nam:0, d_month:0 };
+        let totBB = { th:0, nam:0, q3:0, rem_q3:0, rem_nam:0, d_day:0, d_month:0 };
         sortedBB.forEach((item, idx) => {
           totBB.th += (item.cur.bb || 0); totBB.nam += (item.bb_nam || 0);
           totBB.q3 += (item.bb_q3 || 0); totBB.rem_q3 += (item.rem_bb_q3 || 0); totBB.rem_nam += (item.rem_bb_nam || 0);
+          totBB.d_day += (item.delta_day_bb || 0);
           totBB.d_month += (item.delta_month_bb || 0);
           const c = item.rate_bb_q3 >= 100 ? 'val-good' : (item.rate_bb_q3 >= 95 ? 'val-warning' : 'val-danger');
           const tr = document.createElement('tr');
@@ -1246,7 +1254,7 @@
             <td class="p-2 text-center font-bold text-slate-500">${idx + 1}</td>
             <td class="p-2 font-bold text-slate-900">${item.name}</td>
             <td class="p-2 text-right font-bold text-blue-900 bg-blue-50/50">${(item.cur.bb || 0).toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right font-bold text-slate-400">0</td>
+            <td class="p-2 text-right bg-amber-50/40">${formatDeltaDay(item.delta_day_bb)}</td>
             <td class="p-2 text-right text-slate-700">${(item.bb_nam || 0).toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right text-slate-700">${(item.bb_q3 || 0).toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right ${c}">${formatVnNumber(item.rate_bb_q3, 2)}%</td>
@@ -1261,26 +1269,28 @@
           <tr class="total-row text-slate-900">
             <td class="p-2 text-center" colspan="2">TỔNG CỘNG</td>
             <td class="p-2 text-right text-blue-950">${totBB.th.toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right">0</td>
+            <td class="p-2 text-right">${formatDeltaDay(totBB.d_day)}</td>
             <td class="p-2 text-right">${totBB.nam.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right">${totBB.q3.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right val-good">${totBB.q3 > 0 ? ((totBB.th/totBB.q3)*100).toFixed(2) : '0.00'}%</td>
             <td class="p-2 text-right">${totBB.nam > 0 ? ((totBB.th/totBB.nam)*100).toFixed(2) : '0.00'}%</td>
             <td class="p-2 text-right val-good">${totBB.rem_q3.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right">${totBB.rem_nam.toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right val-danger">${(totBB.d_month>=0?'+':'') + totBB.d_month.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right ${totBB.d_month >= 0 ? 'val-good' : 'val-danger'}">${(totBB.d_month>=0?'+':'') + totBB.d_month.toLocaleString('vi-VN')}</td>
           </tr>
         `;
       }
 
+      // 2. BHXH TỰ NGUYỆN
       const tbodyTN = document.getElementById('tbody-bhxh_tn');
       if (tbodyTN) {
         tbodyTN.innerHTML = '';
         let sortedTN = [...list].sort((a, b) => b.rate_tn_q3 - a.rate_tn_q3);
-        let totTN = { th:0, nam:0, q3:0, rem_q3:0, rem_nam:0, d_month:0 };
+        let totTN = { th:0, nam:0, q3:0, rem_q3:0, rem_nam:0, d_day:0, d_month:0 };
         sortedTN.forEach((item, idx) => {
           totTN.th += (item.cur.tn || 0); totTN.nam += (item.tn_nam || 0);
           totTN.q3 += (item.tn_q3 || 0); totTN.rem_q3 += (item.rem_tn_q3 || 0); totTN.rem_nam += (item.rem_tn_nam || 0);
+          totTN.d_day += (item.delta_day_tn || 0);
           totTN.d_month += (item.delta_month_tn || 0);
           const c = item.rate_tn_q3 >= 95 ? 'val-good' : (item.rate_tn_q3 >= 90 ? 'val-warning' : 'val-danger');
           const tr = document.createElement('tr');
@@ -1289,7 +1299,7 @@
             <td class="p-2 text-center font-bold text-slate-500">${idx + 1}</td>
             <td class="p-2 font-bold text-slate-900">${item.name}</td>
             <td class="p-2 text-right font-bold text-emerald-900 bg-emerald-50/50">${(item.cur.tn || 0).toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right font-bold text-slate-400">0</td>
+            <td class="p-2 text-right bg-amber-50/40">${formatDeltaDay(item.delta_day_tn)}</td>
             <td class="p-2 text-right text-slate-700">${(item.tn_nam || 0).toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right text-slate-700">${(item.tn_q3 || 0).toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right ${c}">${formatVnNumber(item.rate_tn_q3, 2)}%</td>
@@ -1304,26 +1314,28 @@
           <tr class="total-row text-slate-900">
             <td class="p-2 text-center" colspan="2">TỔNG CỘNG</td>
             <td class="p-2 text-right text-emerald-950">${totTN.th.toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right">0</td>
+            <td class="p-2 text-right">${formatDeltaDay(totTN.d_day)}</td>
             <td class="p-2 text-right">${totTN.nam.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right">${totTN.q3.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right val-warning">${totTN.q3 > 0 ? ((totTN.th/totTN.q3)*100).toFixed(2) : '0.00'}%</td>
             <td class="p-2 text-right">${totTN.nam > 0 ? ((totTN.th/totTN.nam)*100).toFixed(2) : '0.00'}%</td>
             <td class="p-2 text-right text-slate-800">${totTN.rem_q3.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right">${totTN.rem_nam.toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right val-danger">${(totTN.d_month>=0?'+':'') + totTN.d_month.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right ${totTN.d_month >= 0 ? 'val-good' : 'val-danger'}">${(totTN.d_month>=0?'+':'') + totTN.d_month.toLocaleString('vi-VN')}</td>
           </tr>
         `;
       }
 
+      // 3. BẢO HIỂM Y TẾ
       const tbodyBHYT = document.getElementById('tbody-bhyt');
       if (tbodyBHYT) {
         tbodyBHYT.innerHTML = '';
         let sortedBHYT = [...list].sort((a, b) => b.rate_bhyt_q3 - a.rate_bhyt_q3);
-        let totBHYT = { th:0, nam:0, q3:0, rem_q3:0, rem_nam:0, d_month:0 };
+        let totBHYT = { th:0, nam:0, q3:0, rem_q3:0, rem_nam:0, d_day:0, d_month:0 };
         sortedBHYT.forEach((item, idx) => {
           totBHYT.th += (item.cur.bhyt || 0); totBHYT.nam += (item.bhyt_nam || 0);
           totBHYT.q3 += (item.bhyt_q3 || 0); totBHYT.rem_q3 += (item.rem_bhyt_q3 || 0); totBHYT.rem_nam += (item.rem_bhyt_nam || 0);
+          totBHYT.d_day += (item.delta_day_bhyt || 0);
           totBHYT.d_month += (item.delta_month_bhyt || 0);
           const c = item.rate_bhyt_q3 >= 98 ? 'val-good' : (item.rate_bhyt_q3 >= 95 ? 'val-warning' : 'val-danger');
           const tr = document.createElement('tr');
@@ -1332,7 +1344,7 @@
             <td class="p-2 text-center font-bold text-slate-500">${idx + 1}</td>
             <td class="p-2 font-bold text-slate-900">${item.name}</td>
             <td class="p-2 text-right font-bold text-indigo-900 bg-indigo-50/50">${(item.cur.bhyt || 0).toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right font-bold text-slate-400">0</td>
+            <td class="p-2 text-right bg-amber-50/40">${formatDeltaDay(item.delta_day_bhyt)}</td>
             <td class="p-2 text-right text-slate-700">${(item.bhyt_nam || 0).toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right text-slate-700">${(item.bhyt_q3 || 0).toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right ${c}">${formatVnNumber(item.rate_bhyt_q3, 2)}%</td>
@@ -1347,14 +1359,14 @@
           <tr class="total-row text-slate-900">
             <td class="p-2 text-center" colspan="2">TỔNG CỘNG</td>
             <td class="p-2 text-right text-indigo-950">${totBHYT.th.toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right">0</td>
+            <td class="p-2 text-right">${formatDeltaDay(totBHYT.d_day)}</td>
             <td class="p-2 text-right">${totBHYT.nam.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right">${totBHYT.q3.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right val-good">${totBHYT.q3 > 0 ? ((totBHYT.th/totBHYT.q3)*100).toFixed(2) : '0.00'}%</td>
             <td class="p-2 text-right">${totBHYT.nam > 0 ? ((totBHYT.th/totBHYT.nam)*100).toFixed(2) : '0.00'}%</td>
             <td class="p-2 text-right val-good">${totBHYT.rem_q3.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right">${totBHYT.rem_nam.toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right val-danger">${(totBHYT.d_month>=0?'+':'') + totBHYT.d_month.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right ${totBHYT.d_month >= 0 ? 'val-good' : 'val-danger'}">${(totBHYT.d_month>=0?'+':'') + totBHYT.d_month.toLocaleString('vi-VN')}</td>
           </tr>
         `;
       }
@@ -1433,6 +1445,49 @@
       }
     }
 
+    function handleSoThuFileUpload(e) {
+      if (!checkAdminPassword()) { e.target.value = ''; return; }
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          let count = 0;
+          const curDate = document.getElementById('selectDate').value || '2026-09-20';
+          if (!DAILY_STORE[curDate]) DAILY_STORE[curDate] = {};
+
+          for (let i = 0; i < rows.length; i++) {
+            const r = rows[i];
+            if (r.length >= 4 && !isNaN(parseInt(r[0]))) {
+              const stt = parseInt(r[0]);
+              if (stt >= 1 && stt <= 9) {
+                if (!DAILY_STORE[curDate][stt]) DAILY_STORE[curDate][stt] = { bb:0, tn:0, bhyt:0, sothu:0, giamno:0, giamno_tyle:0 };
+                DAILY_STORE[curDate][stt].sothu = parseFloat(r[3]) || 0;
+                count++;
+              }
+            }
+          }
+          if (count > 0) {
+            saveStoredData(() => {
+              alert(`Đã cập nhật số thu cho ${count} đơn vị từ file Excel thành công!`);
+              renderSoThuTable();
+            });
+          } else {
+            alert('File Excel không đúng định dạng mẫu Số Thu!');
+          }
+        } catch (err) {
+          alert('Lỗi đọc file Excel Số Thu: ' + err.message);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
     // --- GIẢM NỢ TAB ---
     function renderGiamNoTable() {
       const { list } = getProcessedData();
@@ -1445,7 +1500,9 @@
       list.forEach((item, idx) => {
         const p = GIAMNO_PLAN[item.stt] || { tien: 0, tyle: 0 };
         const actual = item.cur.giamno || 0;
-        const actual_tyle = item.cur.giamno_tyle !== undefined ? item.cur.giamno_tyle : 0;
+        
+        const sothu_plan_nam = SOTHU_PLAN[item.stt] || 0;
+        const actual_tyle = sothu_plan_nam > 0 ? parseFloat(((actual / sothu_plan_nam) * 100).toFixed(2)) : 0;
 
         const conlai_tien = parseFloat((p.tien - actual).toFixed(3));
         const conlai_tyle = parseFloat((p.tyle - actual_tyle).toFixed(2));
@@ -1503,11 +1560,8 @@
       const u = BASE_TARGETS.find(x => x.stt === stt);
       const valTien = prompt(`Nhập số giảm nợ thực hiện (Triệu đồng, ví dụ: 52683) cho ${u.name}:`, DAILY_STORE[curDate][stt].giamno || 0);
       if (valTien === null) return;
-      const valTyle = prompt(`Nhập tỷ lệ thực hiện (%) cho ${u.name}:`, DAILY_STORE[curDate][stt].giamno_tyle || 0);
-      if (valTyle === null) return;
-
+      
       DAILY_STORE[curDate][stt].giamno = parseFloat(valTien) || 0;
-      DAILY_STORE[curDate][stt].giamno_tyle = parseFloat(valTyle) || 0;
       saveStoredData(() => {
         renderGiamNoTable();
         alert("Đã cập nhật giảm nợ thành công!");
@@ -1517,16 +1571,16 @@
     function downloadGiamNoExcelTemplate() {
       const wb = XLSX.utils.book_new();
       const ws_data = [
-        ["STT", "Ten_Don_Vi", "Giam_No_Thuc_Hien_Tien", "Ty_Le_Thuc_Hien_Percent"],
-        [1, "Văn phòng tỉnh", 52683, 0.04],
-        [2, "Hồng Lĩnh", 61809, 0.12],
-        [3, "Hương Sơn", 7394, 0.02],
-        [4, "Đức Thọ", 11715, 0.03],
-        [5, "Can Lộc", 10241, 0.02],
-        [6, "Hương Khê", 4738, 0.01],
-        [7, "Thạch Hà", 11151, 0.03],
-        [8, "Cẩm Xuyên", 7521, 0.02],
-        [9, "Kỳ Anh", 22255, 0.02]
+        ["STT", "Ten_Don_Vi", "Giam_No_Thuc_Hien_Tien"],
+        [1, "Văn phòng tỉnh", 52683],
+        [2, "Hồng Lĩnh", 61809],
+        [3, "Hương Sơn", 7394],
+        [4, "Đức Thọ", 11715],
+        [5, "Can Lộc", 10241],
+        [6, "Hương Khê", 4738],
+        [7, "Thạch Hà", 11151],
+        [8, "Cẩm Xuyên", 7521],
+        [9, "Kỳ Anh", 22255]
       ];
       const ws = XLSX.utils.aoa_to_sheet(ws_data);
       XLSX.utils.book_append_sheet(wb, ws, "Mau_Giam_No");
@@ -1550,12 +1604,11 @@
 
           for (let i = 0; i < rows.length; i++) {
             const r = rows[i];
-            if (r.length >= 4 && !isNaN(parseInt(r[0]))) {
+            if (r.length >= 3 && !isNaN(parseInt(r[0]))) {
               const stt = parseInt(r[0]);
               if (stt >= 1 && stt <= 9) {
                 if (!DAILY_STORE[curDate][stt]) DAILY_STORE[curDate][stt] = { bb:0, tn:0, bhyt:0, sothu:0, giamno:0, giamno_tyle:0 };
                 DAILY_STORE[curDate][stt].giamno = parseFloat(r[2]) || 0;
-                DAILY_STORE[curDate][stt].giamno_tyle = parseFloat(r[3]) || 0;
                 count++;
               }
             }
@@ -1747,7 +1800,7 @@
         w4_over: parseInt(document.getElementById('tt_w4_over').value) || 0
       };
       saveStoredData(() => {
-        alert('Đã lưu thành công số liệu tái tục theo tuần!');
+        alert('Đã lưu thành công số liệu tái tục theo tuần lên Google Drive!');
         closeTaiTucInputModal();
         renderTaiTucTable();
       });
@@ -1827,11 +1880,11 @@
           }
           if (count > 0) {
             saveStoredData(() => {
-              alert(`Đã cập nhật thành công số liệu Tái tục [${labelLoaiHinh}] theo tuần cho ${count} đơn vị từ file Excel!`);
+              alert(`Đã cập nhật thành công số liệu Tái tục [${labelLoaiHinh}] theo tuần cho ${count} đơn vị lên Google Drive!`);
               renderTaiTucTable();
             });
           } else {
-            alert('File Excel không đúng định dạng mẫu! Vui lòng kiểm tra lại cột STT từ 1 đến 9.');
+            alert('File Excel không đúng định dạng mẫu!');
           }
         } catch (err) {
           alert('Lỗi đọc file Excel Tái tục: ' + err.message);
@@ -1854,7 +1907,7 @@
           const sheet = wb.Sheets[wb.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
           let count = 0;
-          const d = document.getElementById('newDailyDate').value || '2026-09-20';
+          const d = document.getElementById('newDailyDate').value || '2026-09-21';
           if (!DAILY_STORE[d]) DAILY_STORE[d] = {};
 
           for (let i = 0; i < rows.length; i++) {
@@ -1880,7 +1933,7 @@
               if (sel) {
                 sel.value = d;
               }
-              alert(`Đã nạp thành công số liệu gốc & tiến độ ngày ${d} từ file Excel!`);
+              alert(`Đã nạp thành công số liệu gốc & tiến độ ngày ${d} từ file Excel lên Google Drive!`);
               switchTab('dashboard');
               refreshAll();
             });
@@ -1889,6 +1942,56 @@
           }
         } catch (err) {
           alert('Lỗi đọc file Excel: ' + err.message);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // --- XỬ LÝ UPLOAD FILE HSSV ---
+    function handleHssvFileUpload(e) {
+      if (!checkAdminPassword()) { e.target.value = ''; return; }
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          let count = 0;
+
+          if (!HSSV_DATA[currentHssvDot]) HSSV_DATA[currentHssvDot] = {};
+
+          for (let i = 0; i < rows.length; i++) {
+            const r = rows[i];
+            if (r.length >= 7 && !isNaN(parseInt(r[0]))) {
+              const stt = parseInt(r[0]);
+              if (stt >= 1 && stt <= 9) {
+                HSSV_DATA[currentHssvDot][stt] = {
+                  schools: parseInt(r[2]) || 0,
+                  students: parseInt(r[3]) || 0,
+                  other_cards: parseInt(r[4]) || 0,
+                  need_vd: parseInt(r[5]) || 0,
+                  joined: parseInt(r[6]) || 0
+                };
+                count++;
+              }
+            }
+          }
+
+          if (count > 0) {
+            saveStoredData(() => {
+              alert(`Đã cập nhật thành công số liệu BHYT HSSV (${currentHssvDot === 'dot1' ? 'Đợt 1' : 'Đợt 2'}) cho ${count} đơn vị lên Google Drive!`);
+              renderHssvTable();
+            });
+          } else {
+            alert('File Excel không đúng định dạng mẫu BHYT HSSV!');
+          }
+        } catch (err) {
+          alert('Lỗi đọc file Excel HSSV: ' + err.message);
         } finally {
           e.target.value = '';
         }
@@ -1918,20 +2021,17 @@
     function exportCurrentTableToExcel() {
       const curDate = document.getElementById('selectDate').value;
       const sortedList = getSortedList();
-      const { isBaseDate } = getProcessedData();
 
       const wb = XLSX.utils.book_new();
       const ws_data = [
-        ["STT", "Đơn vị", "Chỉ tiêu Q3 BB", "Thực hiện BB", "% Đạt Q3 BB", "Còn Q3 BB", "Chỉ tiêu Q3 TN", "Thực hiện TN", "% Đạt Q3 TN", "Còn Q3 TN", "Chỉ tiêu Q3 BHYT", "Thực hiện BHYT", "% Đạt Q3 BHYT", "Còn Q3 BHYT", "Tăng/Giảm Hôm nay", "So tháng trước"]
+        ["STT", "Đơn vị", "Chỉ tiêu Q3 BB", "Thực hiện BB", "% Đạt Q3 BB", "Còn Q3 BB", "Chỉ tiêu Q3 TN", "Thực hiện TN", "% Đạt Q3 TN", "Còn Q3 TN", "Chỉ tiêu Q3 BHYT", "Thực hiện BHYT", "% Đạt Q3 BHYT", "Còn Q3 BHYT"]
       ];
 
       sortedList.forEach(item => {
         ws_data.push([
           item.stt, item.name, item.bb_q3, item.cur.bb, item.rate_bb_q3 + "%", item.rem_bb_q3,
           item.tn_q3, item.cur.tn, item.rate_tn_q3 + "%", item.rem_tn_q3,
-          item.bhyt_q3, item.cur.bhyt, item.rate_bhyt_q3 + "%", item.rem_bhyt_q3,
-          isBaseDate ? 0 : item.delta_day_total,
-          item.delta_month_bb + item.delta_month_tn + item.delta_month_bhyt
+          item.bhyt_q3, item.cur.bhyt, item.rate_bhyt_q3 + "%", item.rem_bhyt_q3
         ]);
       });
 
@@ -2050,7 +2150,7 @@
           <td class="p-2 text-right font-bold text-indigo-900 bg-indigo-50/40">${(item.cur.bhyt || 0).toLocaleString('vi-VN')}</td>
           <td class="p-2 text-right font-black ${c_rate} bg-amber-50/50">${formatVnNumber(item.avg_composite_rate, 2)}%</td>
           <td class="p-2 text-right font-bold ${deltaM >= 0 ? 'val-good' : 'val-danger'}">${(deltaM >= 0 ? '+' : '') + deltaM.toLocaleString('vi-VN')}</td>
-          <td class="p-2 text-center"><span class="px-2 py-0.5 rounded font-black text-[10px] ${idx < 3 ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-slate-100 text-slate-700'}">#${idx + 1}</span></td>
+          <td class="p-2 text-center"><span class="px-2 py-0.5 rounded font-black text-[10px] ${idx < 3 ? 'bg-amber-100 text-amber-950 border border-amber-300' : 'bg-slate-100 text-slate-700'}">#${idx + 1}</span></td>
         `;
         tbody.appendChild(tr);
       });
@@ -2187,7 +2287,7 @@
       };
       saveStoredData(() => {
         renderHssvTable();
-        alert("Đã cập nhật số liệu HSSV thành công!");
+        alert("Đã cập nhật số liệu HSSV thành công lên Google Drive!");
       });
     }
 
@@ -2210,54 +2310,7 @@
       XLSX.writeFile(wb, "Mau_Bao_Cao_BHYT_HSSV_2026_2027.xlsx");
     }
 
-    function handleHssvFileUpload(e) {
-      if (!checkAdminPassword()) { e.target.value = ''; return; }
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        try {
-          const data = new Uint8Array(evt.target.result);
-          const wb = XLSX.read(data, { type: 'array' });
-          const sheet = wb.Sheets[wb.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-          let count = 0;
-          let dotData = HSSV_DATA[currentHssvDot] || HSSV_DATA['dot1'];
-
-          for (let i = 0; i < rows.length; i++) {
-            const r = rows[i];
-            if (r.length >= 7 && !isNaN(parseInt(r[0]))) {
-              const stt = parseInt(r[0]);
-              if (stt >= 1 && stt <= 9) {
-                dotData[stt] = {
-                  schools: parseInt(r[2]) || 0,
-                  students: parseInt(r[3]) || 0,
-                  other_cards: parseInt(r[4]) || 0,
-                  need_vd: parseInt(r[5]) || 0,
-                  joined: parseInt(r[6]) || 0
-                };
-                count++;
-              }
-            }
-          }
-          if (count > 0) {
-            saveStoredData(() => {
-              alert(`Đã cập nhật thành công số liệu BHYT HSSV (${currentHssvDot === 'dot1' ? 'Đợt 1' : 'Đợt 2'}) cho ${count} đơn vị từ file Excel!`);
-              renderHssvTable();
-            });
-          } else {
-            alert('File Excel không đúng định dạng mẫu!');
-          }
-        } catch (err) {
-          alert('Lỗi đọc file Excel HSSV: ' + err.message);
-        } finally {
-          e.target.value = '';
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    }
-
-    // --- KHỞI CHẠY TẢI DỮ LIỆU TỪ FIREBASE KHI MỞ TRANG ---
+    // --- KHỞI CHẠY TẢI DỮ LIỆU TỪ GOOGLE DRIVE KHI MỞ TRANG ---
     loadStoredData();
   </script>
 </body>
