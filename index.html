@@ -1,8 +1,11 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Hệ Thống Điều Hành Chỉ Tiêu BHXH - BHYT & Thu Tái Tục</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -687,9 +690,13 @@
       return parts.join(",");
     }
 
-    // --- TẢI DỮ LIỆU TỪ FIREBASE ---
+    // --- TẢI DỮ LIỆU TỪ FIREBASE (REAL-TIME) ---
+    // Dùng .on('value', ...) thay vì .once('value', ...): mỗi khi có BẤT KỲ máy nào
+    // lưu dữ liệu mới lên Firebase, tất cả các máy khác đang mở sẵn trang sẽ TỰ ĐỘNG
+    // nhận được bản mới nhất và render lại, không cần bấm F5. Đây là nguyên nhân chính
+    // khiến trước đây máy nào mở trang từ trước (không reload) vẫn hiển thị số liệu cũ.
     function loadStoredData() {
-        db.ref('bhxh_data/').once('value', (snapshot) => {
+        db.ref('bhxh_data/').on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
                 if (data.daily_store) DAILY_STORE = data.daily_store;
