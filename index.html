@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- SheetJS CDN cho File Excel .XLSX -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <!-- Firebase SDK Compat (Phiên bản tương thích với mã cấu hình) -->
+  <!-- Firebase SDK Compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
@@ -613,7 +613,7 @@
             <span class="text-slate-500">Kỳ tổng hợp:</span>
             <b class="text-base text-slate-900 ml-1" id="summary-period-label">Tháng 9/2026</b>
           </div>
-          <button onclick="exportMonthlyReportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg font-bold shadow flex items-center gap-1.5"><i class="fa-solid fa-file-excel"></i> Xuất Báo Cáo Tháng (.xlsx)</button>
+          <button onclick="exportMonthlyReportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg font-bold shadow flex items-center gap-1.5"><i class="fa-solid fa-file-excel">x</i> Xuất Báo Cáo Tháng (.xlsx)</button>
         </div>
 
         <table class="w-full text-xs text-left text-slate-800 data-table">
@@ -675,7 +675,6 @@
       return true;
     }
 
-    // Hàm định dạng số nguyên chuẩn triệu đồng (dấu . ngăn cách hàng nghìn)
     function formatVnInteger(val) {
       if (val === null || val === undefined || isNaN(val)) return "0";
       return Math.round(Number(val)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -709,7 +708,7 @@
         });
     }
 
-    // --- LƯU DỮ LIỆU LÊN FIREBASE ---
+    // --- LƯU DỮ LIỆU LÊN FIREBASE (ĐỒNG BỘ TRỰC TUYẾN) ---
     function saveStoredData() {
         const payload = {
             daily_store: DAILY_STORE,
@@ -1329,7 +1328,7 @@
             <td class="p-2 text-right val-good">${totBHYT.q3 > 0 ? ((totBHYT.th/totBHYT.q3)*100).toFixed(2) : '0.00'}%</td>
             <td class="p-2 text-right">${totBHYT.nam > 0 ? ((totBHYT.th/totBHYT.nam)*100).toFixed(2) : '0.00'}%</td>
             <td class="p-2 text-right val-good">${totBHYT.rem_q3.toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right">${totBHYT.rem_nam.NSLog?.toLocaleString('vi-VN') || totBHYT.rem_nam.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">${totBHYT.rem_nam.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right val-danger">${(totBHYT.d_month>=0?'+':'') + totBHYT.d_month.toLocaleString('vi-VN')}</td>
           </tr>
         `;
@@ -1738,7 +1737,6 @@
         });
       }
       loadUnitTaiTucForm();
-      document.getElementById('modal-taituc').classList.add('hidden'); // Fix modal close bug
       document.getElementById('modal-taituc').classList.remove('hidden');
     }
 
@@ -1799,7 +1797,7 @@
             }
           }
           if (count > 0) {
-            saveStoredData();
+            saveStoredData(); // ĐÃ ĐỒNG BỘ LÊN FIREBASE
             alert(`Đã cập nhật thành công số liệu Tái tục [${labelLoaiHinh}] theo tuần cho ${count} đơn vị từ file Excel!`);
             renderTaiTucTable();
           } else {
@@ -1847,7 +1845,7 @@
             }
           }
           if (count > 0) {
-            saveStoredData();
+            saveStoredData(); // ĐÃ ĐỒNG BỘ LÊN FIREBASE
             const sel = document.getElementById('selectDate');
             if (sel) {
               sel.value = d;
@@ -2155,7 +2153,7 @@
         need_vd: parseInt(sNeed) || 0,
         joined: parseInt(sJoi) || 0
       };
-      saveStoredData();
+      saveStoredData(); // ĐÃ ĐỒNG BỘ LÊN FIREBASE
       renderHssvTable();
       alert("Đã cập nhật số liệu HSSV thành công!");
     }
@@ -2191,7 +2189,7 @@
           const sheet = wb.Sheets[wb.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
           let count = 0;
-          let dotData =HSSV_DATA[currentHssvDot] || HSSV_DATA['dot1'];
+          let dotData = HSSV_DATA[currentHssvDot] || HSSV_DATA['dot1'];
 
           for (let i = 0; i < rows.length; i++) {
             const r = rows[i];
@@ -2210,7 +2208,7 @@
             }
           }
           if (count > 0) {
-            saveStoredData();
+            saveStoredData(); // ĐÃ ĐỒNG BỘ LÊN FIREBASE
             alert(`Đã cập nhật thành công số liệu BHYT HSSV (${currentHssvDot === 'dot1' ? 'Đợt 1' : 'Đợt 2'}) cho ${count} đơn vị từ file Excel!`);
             renderHssvTable();
           } else {
