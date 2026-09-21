@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -613,7 +613,7 @@
             <span class="text-slate-500">Kỳ tổng hợp:</span>
             <b class="text-base text-slate-900 ml-1" id="summary-period-label">Tháng 9/2026</b>
           </div>
-          <button onclick="exportMonthlyReportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg font-bold shadow flex items-center gap-1.5"><i class="fa-solid fa-file-excel">x</i> Xuất Báo Cáo Tháng (.xlsx)</button>
+          <button onclick="exportMonthlyReportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg font-bold shadow flex items-center gap-1.5"><i class="fa-solid fa-file-excel"></i> Xuất Báo Cáo Tháng (.xlsx)</button>
         </div>
 
         <table class="w-full text-xs text-left text-slate-800 data-table">
@@ -708,7 +708,7 @@
         });
     }
 
-    // --- LƯU DỮ LIỆU LÊN FIREBASE (ĐỒNG BỘ TRỰC TUYẾN) ---
+    // --- LƯU DỮ LIỆU LÊN FIREBASE ---
     function saveStoredData() {
         const payload = {
             daily_store: DAILY_STORE,
@@ -716,9 +716,9 @@
             taituc_tn: TAI_TUC_TN,
             taituc_bhyt: TAI_TUC_BHYT,
             prev_month: PREV_MONTH_DATA,
-            sothu_data: SOTHU_DATA,
+            sothu_data: typeof SOTHU_DATA !== 'undefined' ? SOTHU_DATA : {},
             giamno_plan: GIAMNO_PLAN,
-            giamno_data: GIAMNO_DATA
+            giamno_data: typeof GIAMNO_DATA !== 'undefined' ? GIAMNO_DATA : {}
         };
 
         db.ref('bhxh_data/').set(payload)
@@ -919,7 +919,7 @@
           <div class="border-b border-slate-200 pb-3 flex justify-between items-center">
             <div>
               <h4 class="font-bold text-slate-800 text-base"><i class="fa-solid fa-lock text-amber-600 mr-1.5"></i>CẬP NHẬT SỐ LIỆU GỐC & TIẾN ĐỘ THEO NGÀY (.XLSX)</h4>
-              <p class="text-xs text-slate-500">Cập nhật tự động bằng file Excel chuyên dụng cho các đơn vị.</p>
+              <p class="text-xs text-slate-500">Cập nhật tự động số liệu gốc phát triển đối tượng, số thu và giảm nợ theo ngày bằng file Excel.</p>
             </div>
             <button onclick="lockCurrentSession()" class="text-xs text-rose-600 hover:underline font-bold"><i class="fa-solid fa-arrow-right-from-bracket"></i> Khóa tab</button>
           </div>
@@ -1797,7 +1797,7 @@
             }
           }
           if (count > 0) {
-            saveStoredData(); // ĐÃ ĐỒNG BỘ LÊN FIREBASE
+            saveStoredData();
             alert(`Đã cập nhật thành công số liệu Tái tục [${labelLoaiHinh}] theo tuần cho ${count} đơn vị từ file Excel!`);
             renderTaiTucTable();
           } else {
@@ -1845,7 +1845,7 @@
             }
           }
           if (count > 0) {
-            saveStoredData(); // ĐÃ ĐỒNG BỘ LÊN FIREBASE
+            saveStoredData();
             const sel = document.getElementById('selectDate');
             if (sel) {
               sel.value = d;
@@ -2153,7 +2153,7 @@
         need_vd: parseInt(sNeed) || 0,
         joined: parseInt(sJoi) || 0
       };
-      saveStoredData(); // ĐÃ ĐỒNG BỘ LÊN FIREBASE
+      saveStoredData();
       renderHssvTable();
       alert("Đã cập nhật số liệu HSSV thành công!");
     }
@@ -2208,7 +2208,7 @@
             }
           }
           if (count > 0) {
-            saveStoredData(); // ĐÃ ĐỒNG BỘ LÊN FIREBASE
+            saveStoredData();
             alert(`Đã cập nhật thành công số liệu BHYT HSSV (${currentHssvDot === 'dot1' ? 'Đợt 1' : 'Đợt 2'}) cho ${count} đơn vị từ file Excel!`);
             renderHssvTable();
           } else {
