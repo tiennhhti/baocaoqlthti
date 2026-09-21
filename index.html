@@ -665,8 +665,13 @@
 
     const ADMIN_PASSWORD = "Binbo1977a@";
     let isSessionUnlocked = false;
+    let isFirebaseDataLoaded = false; // true sau khi đã nhận được ít nhất 1 lần dữ liệu thật từ máy chủ
 
     function checkAdminPassword() {
+      if (!isFirebaseDataLoaded) {
+        alert("Dữ liệu đang tải từ hệ thống đám mây, vui lòng đợi vài giây rồi thử lại (để tránh ghi đè mất dữ liệu đang có).");
+        return false;
+      }
       if (!isSessionUnlocked) {
         const pwd = prompt("Vui lòng nhập mật khẩu quản trị để thực hiện cập nhật file:");
         if (pwd !== ADMIN_PASSWORD) {
@@ -708,15 +713,23 @@
                 if (data.giamno_plan) GIAMNO_PLAN = data.giamno_plan;
                 if (data.giamno_data) GIAMNO_DATA = data.giamno_data;
             }
+            isFirebaseDataLoaded = true;
             refreshAll();
         }, (error) => {
             console.error("Lỗi đọc Firebase:", error);
+            alert("KHÔNG kết nối được với hệ thống đám mây để tải dữ liệu (có thể do quyền truy cập Firebase hoặc mạng). Số liệu hiển thị có thể KHÔNG phải bản mới nhất.\n\nChi tiết lỗi: " + error.message);
             refreshAll();
         });
     }
 
     // --- LƯU DỮ LIỆU LÊN FIREBASE ---
-    function saveStoredData() {
+    // onSuccess: hàm callback CHỈ chạy sau khi Firebase xác nhận đã lưu xong (tránh báo
+    // "thành công" giả trong khi dữ liệu thực ra chưa được ghi lên máy chủ).
+    function saveStoredData(onSuccess) {
+        if (!isFirebaseDataLoaded) {
+            alert("Chưa tải xong dữ liệu gốc từ máy chủ nên KHÔNG thể lưu lúc này (để tránh ghi đè mất dữ liệu). Vui lòng tải lại trang và thử lại.");
+            return;
+        }
         const payload = {
             daily_store: DAILY_STORE,
             hssv_data: HSSV_DATA,
@@ -731,9 +744,10 @@
         db.ref('bhxh_data/').set(payload)
           .then(() => {
               console.log("Đã lưu dữ liệu lên Firebase thành công!");
+              if (typeof onSuccess === 'function') onSuccess();
           })
           .catch((error) => {
-              alert("Lỗi khi lưu dữ liệu lên hệ thống đám mây: " + error.message);
+              alert("❌ LƯU THẤT BẠI — dữ liệu vừa nhập CHƯA được lưu lên hệ thống đám mây, sẽ mất khi tải lại trang!\n\nLý do: " + error.message + "\n\nVui lòng kiểm tra kết nối mạng / quyền truy cập Firebase rồi thử lưu lại.");
           });
     }
 
@@ -1412,9 +1426,10 @@
       const val = prompt(`Nhập số thu thực hiện (Triệu đồng, ví dụ: 842873) cho ${u.name} ngày ${curDate}:`, DAILY_STORE[curDate][stt].sothu || 0);
       if (val !== null) {
         DAILY_STORE[curDate][stt].sothu = parseFloat(val) || 0;
-        saveStoredData();
-        renderSoThuTable();
-        alert("Đã cập nhật số thu thành công!");
+        saveStoredData(() => {
+          renderSoThuTable();
+          alert("Đã cập nhật số thu thành công!");
+        });
       }
     }
 
@@ -1493,9 +1508,10 @@
 
       DAILY_STORE[curDate][stt].giamno = parseFloat(valTien) || 0;
       DAILY_STORE[curDate][stt].giamno_tyle = parseFloat(valTyle) || 0;
-      saveStoredData();
-      renderGiamNoTable();
-      alert("Đã cập nhật giảm nợ thành công!");
+      saveStoredData(() => {
+        renderGiamNoTable();
+        alert("Đã cập nhật giảm nợ thành công!");
+      });
     }
 
     function downloadGiamNoExcelTemplate() {
@@ -1545,9 +1561,10 @@
             }
           }
           if (count > 0) {
-            saveStoredData();
-            alert(`Đã cập nhật thành công số liệu Giảm nợ cho ${count} đơn vị từ file Excel!`);
-            renderGiamNoTable();
+            saveStoredData(() => {
+              alert(`Đã cập nhật thành công số liệu Giảm nợ cho ${count} đơn vị từ file Excel!`);
+              renderGiamNoTable();
+            });
           } else {
             alert('File Excel không đúng định dạng mẫu Giảm nợ!');
           }
@@ -1729,10 +1746,11 @@
         w4_due: parseInt(document.getElementById('tt_w4_due').value) || 0,
         w4_over: parseInt(document.getElementById('tt_w4_over').value) || 0
       };
-      saveStoredData();
-      alert('Đã lưu thành công số liệu tái tục theo tuần!');
-      closeTaiTucInputModal();
-      renderTaiTucTable();
+      saveStoredData(() => {
+        alert('Đã lưu thành công số liệu tái tục theo tuần!');
+        closeTaiTucInputModal();
+        renderTaiTucTable();
+      });
     }
 
     function editTaiTuc(stt) {
@@ -1808,9 +1826,10 @@
             }
           }
           if (count > 0) {
-            saveStoredData();
-            alert(`Đã cập nhật thành công số liệu Tái tục [${labelLoaiHinh}] theo tuần cho ${count} đơn vị từ file Excel!`);
-            renderTaiTucTable();
+            saveStoredData(() => {
+              alert(`Đã cập nhật thành công số liệu Tái tục [${labelLoaiHinh}] theo tuần cho ${count} đơn vị từ file Excel!`);
+              renderTaiTucTable();
+            });
           } else {
             alert('File Excel không đúng định dạng mẫu! Vui lòng kiểm tra lại cột STT từ 1 đến 9.');
           }
@@ -1856,14 +1875,15 @@
             }
           }
           if (count > 0) {
-            saveStoredData();
-            const sel = document.getElementById('selectDate');
-            if (sel) {
-              sel.value = d;
-            }
-            alert(`Đã nạp thành công số liệu gốc & tiến độ ngày ${d} từ file Excel!`);
-            switchTab('dashboard');
-            refreshAll();
+            saveStoredData(() => {
+              const sel = document.getElementById('selectDate');
+              if (sel) {
+                sel.value = d;
+              }
+              alert(`Đã nạp thành công số liệu gốc & tiến độ ngày ${d} từ file Excel!`);
+              switchTab('dashboard');
+              refreshAll();
+            });
           } else {
             alert('File Excel không đúng định dạng mẫu!');
           }
@@ -1968,10 +1988,11 @@
           tyle: parseFloat(document.getElementById(`inp_giamno_tyle_${t.stt}`).value) || 0
         };
       });
-      saveStoredData();
-      alert('Đã lưu thành công cấu hình mốc tháng trước và chỉ tiêu giao giảm nợ!');
-      switchTab('dashboard');
-      refreshAll();
+      saveStoredData(() => {
+        alert('Đã lưu thành công cấu hình mốc tháng trước và chỉ tiêu giao giảm nợ!');
+        switchTab('dashboard');
+        refreshAll();
+      });
     }
 
     function onMonthYearVietChanged() {
@@ -2164,9 +2185,10 @@
         need_vd: parseInt(sNeed) || 0,
         joined: parseInt(sJoi) || 0
       };
-      saveStoredData();
-      renderHssvTable();
-      alert("Đã cập nhật số liệu HSSV thành công!");
+      saveStoredData(() => {
+        renderHssvTable();
+        alert("Đã cập nhật số liệu HSSV thành công!");
+      });
     }
 
     function downloadHssvExcelTemplate() {
@@ -2219,9 +2241,10 @@
             }
           }
           if (count > 0) {
-            saveStoredData();
-            alert(`Đã cập nhật thành công số liệu BHYT HSSV (${currentHssvDot === 'dot1' ? 'Đợt 1' : 'Đợt 2'}) cho ${count} đơn vị từ file Excel!`);
-            renderHssvTable();
+            saveStoredData(() => {
+              alert(`Đã cập nhật thành công số liệu BHYT HSSV (${currentHssvDot === 'dot1' ? 'Đợt 1' : 'Đợt 2'}) cho ${count} đơn vị từ file Excel!`);
+              renderHssvTable();
+            });
           } else {
             alert('File Excel không đúng định dạng mẫu!');
           }
