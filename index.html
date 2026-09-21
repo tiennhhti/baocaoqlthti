@@ -8,6 +8,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- SheetJS CDN cho File Excel .XLSX -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Firebase SDK Compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -640,6 +644,21 @@
   </footer>
 
   <script>
+    // --- KẾT NỐI FIREBASE CHO DỰ ÁN: baocaoqlthti ---
+    const firebaseConfig = {
+      apiKey: "THAY_API_KEY_CUA_ANH_VAO_DAY",
+      authDomain: "baocaoqlthti.firebaseapp.com",
+      databaseURL: "https://baocaoqlthti-default-rtdb.firebaseio.com",
+      projectId: "baocaoqlthti",
+      storageBucket: "baocaoqlthti.appspot.com",
+      messagingSenderId: "ID_CUA_ANH",
+      appId: "APP_ID_CUA_ANH"
+    };
+
+    // Khởi tạo Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     const ADMIN_PASSWORD = "Binbo1977a@";
     let isSessionUnlocked = false;
 
@@ -668,45 +687,47 @@
       return parts.join(",");
     }
 
+    // --- TẢI DỮ LIỆU TỪ FIREBASE (THAY THẾ LOCALSTORAGE) ---
     function loadStoredData() {
-        try {
-            const savedDaily = localStorage.getItem('bhxh_daily_store');
-            if (savedDaily) DAILY_STORE = JSON.parse(savedDaily);
-
-            const savedHssv = localStorage.getItem('bhxh_hssv_data_v2');
-            if (savedHssv) HSSV_DATA = JSON.parse(savedHssv);
-
-            const savedTn = localStorage.getItem('bhxh_taituc_tn');
-            if (savedTn) TAI_TUC_TN = JSON.parse(savedTn);
-
-            const savedBhyt = localStorage.getItem('bhxh_taituc_bhyt');
-            if (savedBhyt) TAI_TUC_BHYT = JSON.parse(savedBhyt);
-
-            const savedMonth = localStorage.getItem('bhxh_prev_month');
-            if (savedMonth) PREV_MONTH_DATA = JSON.parse(savedMonth);
-
-            const savedSoThu = localStorage.getItem('bhxh_sothu_data');
-            if (savedSoThu) SOTHU_DATA = JSON.parse(savedSoThu);
-
-            const savedGiamNoPlan = localStorage.getItem('bhxh_giamno_plan');
-            if (savedGiamNoPlan) GIAMNO_PLAN = JSON.parse(savedGiamNoPlan);
-
-            const savedGiamNo = localStorage.getItem('bhxh_giamno_data');
-            if (savedGiamNo) GIAMNO_DATA = JSON.parse(savedGiamNo);
-        } catch(e) { console.error('Lỗi đọc localStorage:', e); }
+        db.ref('bhxh_data/').once('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                if (data.daily_store) DAILY_STORE = data.daily_store;
+                if (data.hssv_data) HSSV_DATA = data.hssv_data;
+                if (data.taituc_tn) TAI_TUC_TN = data.taituc_tn;
+                if (data.taituc_bhyt) TAI_TUC_BHYT = data.taituc_bhyt;
+                if (data.prev_month) PREV_MONTH_DATA = data.prev_month;
+                if (data.sothu_data) SOTHU_DATA = data.sothu_data;
+                if (data.giamno_plan) GIAMNO_PLAN = data.giamno_plan;
+                if (data.giamno_data) GIAMNO_DATA = data.giamno_data;
+            }
+            refreshAll();
+        }, (error) => {
+            console.error("Lỗi đọc Firebase:", error);
+            refreshAll();
+        });
     }
 
+    // --- LƯU DỮ LIỆU LÊN FIREBASE (ĐỒNG BỘ TRỰC TUYẾN) ---
     function saveStoredData() {
-        try {
-            localStorage.setItem('bhxh_daily_store', JSON.stringify(DAILY_STORE));
-            localStorage.setItem('bhxh_hssv_data_v2', JSON.stringify(HSSV_DATA));
-            localStorage.setItem('bhxh_taituc_tn', JSON.stringify(TAI_TUC_TN));
-            localStorage.setItem('bhxh_taituc_bhyt', JSON.stringify(TAI_TUC_BHYT));
-            localStorage.setItem('bhxh_prev_month', JSON.stringify(PREV_MONTH_DATA));
-            localStorage.setItem('bhxh_sothu_data', JSON.stringify(SOTHU_DATA));
-            localStorage.setItem('bhxh_giamno_plan', JSON.stringify(GIAMNO_PLAN));
-            localStorage.setItem('bhxh_giamno_data', JSON.stringify(GIAMNO_DATA));
-        } catch(e) { console.error('Lỗi lưu localStorage:', e); }
+        const payload = {
+            daily_store: DAILY_STORE,
+            hssv_data: HSSV_DATA,
+            taituc_tn: TAI_TUC_TN,
+            taituc_bhyt: TAI_TUC_BHYT,
+            prev_month: PREV_MONTH_DATA,
+            sothu_data: SOTHU_DATA,
+            giamno_plan: GIAMNO_PLAN,
+            giamno_data: GIAMNO_DATA
+        };
+
+        db.ref('bhxh_data/').set(payload)
+          .then(() => {
+              console.log("Đã lưu dữ liệu lên Firebase thành công!");
+          })
+          .catch((error) => {
+              alert("Lỗi khi lưu dữ liệu lên hệ thống đám mây: " + error.message);
+          });
     }
 
     const BASE_TARGETS = [
@@ -1386,7 +1407,7 @@
       }
     }
 
-    // --- GIẢM NỢ TAB (ĐÃ ĐẢO VỊ TRÍ CỘT TỶ LỆ THỰC HIỆN VÀ CÒN PHẢI THỰC HIỆN CHO CÁC DÒNG) ---
+    // --- GIẢM NỢ TAB ---
     function renderGiamNoTable() {
       const { list } = getProcessedData();
       const tbody = document.getElementById('tbody-giamno');
@@ -2202,9 +2223,8 @@
       reader.readAsArrayBuffer(file);
     }
 
-    // Khởi chạy khi mở trang
+    // --- KHỞI CHẠY TẢI DỮ LIỆU TỪ FIREBASE KHI MỞ TRANG ---
     loadStoredData();
-    refreshAll();
   </script>
 </body>
 </html>
