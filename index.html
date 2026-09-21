@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- SheetJS CDN cho File Excel .XLSX -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <!-- Firebase SDK Compat -->
+  <!-- Firebase SDK Compat (Phiên bản tương thích với mã cấu hình) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
@@ -644,15 +644,16 @@
   </footer>
 
   <script>
-    // --- KẾT NỐI FIREBASE CHO DỰ ÁN: baocaoqlthti ---
+    // --- KẾT NỐI FIREBASE CHÍNH XÁC CHO DỰ ÁN: baocaoqlthti ---
     const firebaseConfig = {
-      apiKey: "THAY_API_KEY_CUA_ANH_VAO_DAY",
+      apiKey: "AIzaSyBnUTiFjVnFoOK-0RHiEPtwqTKcPjKFxJs",
       authDomain: "baocaoqlthti.firebaseapp.com",
       databaseURL: "https://baocaoqlthti-default-rtdb.firebaseio.com",
       projectId: "baocaoqlthti",
-      storageBucket: "baocaoqlthti.appspot.com",
-      messagingSenderId: "ID_CUA_ANH",
-      appId: "APP_ID_CUA_ANH"
+      storageBucket: "baocaoqlthti.firebasestorage.app",
+      messagingSenderId: "172229921729",
+      appId: "1:172229921729:web:9f56be7299c6932d277d40",
+      measurementId: "G-8RTSNZLRPP"
     };
 
     // Khởi tạo Firebase
@@ -687,7 +688,7 @@
       return parts.join(",");
     }
 
-    // --- TẢI DỮ LIỆU TỪ FIREBASE (THAY THẾ LOCALSTORAGE) ---
+    // --- TẢI DỮ LIỆU TỪ FIREBASE ---
     function loadStoredData() {
         db.ref('bhxh_data/').once('value', (snapshot) => {
             const data = snapshot.val();
@@ -708,7 +709,7 @@
         });
     }
 
-    // --- LƯU DỮ LIỆU LÊN FIREBASE (ĐỒNG BỘ TRỰC TUYẾN) ---
+    // --- LƯU DỮ LIỆU LÊN FIREBASE ---
     function saveStoredData() {
         const payload = {
             daily_store: DAILY_STORE,
@@ -1328,7 +1329,7 @@
             <td class="p-2 text-right val-good">${totBHYT.q3 > 0 ? ((totBHYT.th/totBHYT.q3)*100).toFixed(2) : '0.00'}%</td>
             <td class="p-2 text-right">${totBHYT.nam > 0 ? ((totBHYT.th/totBHYT.nam)*100).toFixed(2) : '0.00'}%</td>
             <td class="p-2 text-right val-good">${totBHYT.rem_q3.toLocaleString('vi-VN')}</td>
-            <td class="p-2 text-right">${totBHYT.rem_nam.toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-right">${totBHYT.rem_nam.NSLog?.toLocaleString('vi-VN') || totBHYT.rem_nam.toLocaleString('vi-VN')}</td>
             <td class="p-2 text-right val-danger">${(totBHYT.d_month>=0?'+':'') + totBHYT.d_month.toLocaleString('vi-VN')}</td>
           </tr>
         `;
@@ -1436,9 +1437,9 @@
           <td class="p-2 text-right text-slate-700">${formatVnInteger(p.tien)}</td>
           <td class="p-2 text-right text-slate-700">${formatVnNumber(p.tyle, 2)}%</td>
           <td class="p-2 text-right font-bold text-emerald-950 bg-emerald-50/40">${formatVnInteger(actual)}</td>
-          <td class="p-2 text-right font-bold text-emerald-900">${formatVnNumber(conlai_tyle, 2)}%</td>
+          <td class="p-2 text-right font-bold text-emerald-900">${formatVnNumber(actual_tyle, 2)}%</td>
           <td class="p-2 text-right text-slate-700">${formatVnInteger(conlai_tien)}</td>
-          <td class="p-2 text-right font-semibold text-slate-800">${formatVnNumber(actual_tyle, 2)}%</td>
+          <td class="p-2 text-right font-semibold text-slate-800">${formatVnNumber(conlai_tyle, 2)}%</td>
           <td class="p-2 text-center">
             <button onclick="editGiamNo(${item.stt})" class="text-blue-600 hover:text-blue-800 font-bold px-1"><i class="fa-solid fa-pen"></i> Sửa</button>
           </td>
@@ -1737,6 +1738,7 @@
         });
       }
       loadUnitTaiTucForm();
+      document.getElementById('modal-taituc').classList.add('hidden'); // Fix modal close bug
       document.getElementById('modal-taituc').classList.remove('hidden');
     }
 
@@ -2189,7 +2191,7 @@
           const sheet = wb.Sheets[wb.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
           let count = 0;
-          let dotData = HSSV_DATA[currentHssvDot] || HSSV_DATA['dot1'];
+          let dotData =HSSV_DATA[currentHssvDot] || HSSV_DATA['dot1'];
 
           for (let i = 0; i < rows.length; i++) {
             const r = rows[i];
